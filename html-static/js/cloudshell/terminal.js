@@ -153,6 +153,11 @@
 			// Dell SmartFabric OS10: admin/admin (containerlab-injected, vrnetlab-created;
 			// live-login verified on bench 2026-08-22)
 			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+		} else if (nodeKind === 'sonic-vs') {
+			// SONiC community VS: admin/YourPaSsWoRd (created by the NetPilot init
+			// script — containerlab registers no credentials for the kind;
+			// live-login verified on bench 2026-09-29, containerlab-mcp#219)
+			terminalCommand = "sshpass -p 'YourPaSsWoRd' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else {
 			// Other network devices: use SSH with admin user (default fallback, no auto-password)
 			terminalCommand = "ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
