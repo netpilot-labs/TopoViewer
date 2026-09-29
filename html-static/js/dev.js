@@ -11,7 +11,7 @@ var globalSelectedEdge
 var linkEndpointVisibility = true;
 var nodeContainerStatusVisibility = false;
 
-var globalShellUrl = "/js/cloudshell/index.html?v=20260822a"
+var globalShellUrl = "/js/cloudshell/index.html?v=20260929a"
 
 // Console pages opened as popups (window.open on globalShellUrl below) post
 // console-activity messages to this page — their opener. Relay them to our
