@@ -14,9 +14,10 @@ agent reads (prompts, tool descriptions, deny texts) is `prompt-engineering` —
 Scripts live in this skill's `scripts/`; call them by ABSOLUTE path (your cwd is a worktree) and
 run them, never re-derive them. For canonical and generated scripts, set `WORKSPACE` to the
 actual multi-repository workspace root (locally `/Users/linzhu/git_projects/NetPilot-Claude`).
-Use the canonical scripts at `/Users/linzhu/agent-config/dev-workflow/scripts` in this local
-workspace. Their convenience link and a generated copy’s component/worktree location do not
-identify the workspace root. Standalone clones still need the sibling workspace and credentials
+Resolve `scripts/` beside the `dev-workflow/SKILL.md` loaded for this session and use its
+absolute path. In Lin’s local workspace, `/Users/linzhu/agent-config/dev-workflow/scripts`
+is a convenience alias. Neither that alias nor a generated component/worktree location identifies
+the workspace root. Standalone clones still need the sibling workspace and credentials
 for checks that require them:
 
 | Script | Step | Does |

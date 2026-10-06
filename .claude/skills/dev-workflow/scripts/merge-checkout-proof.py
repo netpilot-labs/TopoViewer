@@ -29,7 +29,7 @@ def epoch(value):
 
 
 def checkout_sha(log, steps, pr):
-    windows = [s for s in steps if re.fullmatch(r"Run actions/checkout@v[2-6]", s.get("name", ""))
+    windows = [s for s in steps if re.fullmatch(r"Run actions/checkout@v[2-7]", s.get("name", ""))
                and s.get("status") == "completed" and s.get("conclusion") == "success"]
     if len(windows) != 1:
         raise ValueError("one successful standard checkout action required per job")

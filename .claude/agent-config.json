@@ -76,11 +76,65 @@
       "sha256": "f034c55e53775e637ac2bf3ac307e3da1370d6866e3a01f0b2f988db48b79f35",
       "source": "dependency-updates/mechanics.md"
     },
+    ".claude/skills/dependency-updates/scripts/alert.sh": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "98ac2708a2f2baa7b93e2f632b799f6eee06ee751d70747be7ac11db8b119362",
+      "source": "dependency-updates/scripts/alert.sh"
+    },
+    ".claude/skills/dependency-updates/scripts/dashboard.sh": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "e53d70ad59d68e20d70269803583bdd336cf3101fc627d79e3732f6f1c543d94",
+      "source": "dependency-updates/scripts/dashboard.sh"
+    },
+    ".claude/skills/dependency-updates/scripts/inventory.sh": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "9368b3ffbc4e5574eebad8fbcad13fe2ddb8ff317c0391184625acb87fdc42d3",
+      "source": "dependency-updates/scripts/inventory.sh"
+    },
+    ".claude/skills/dependency-updates/scripts/lockdiff.sh": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "fe2e2d9ccd06929db642575febe471688e463d2e7dcebb3fe37dc5944e0e4586",
+      "source": "dependency-updates/scripts/lockdiff.sh"
+    },
+    ".claude/skills/dependency-updates/scripts/merge.sh": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "005002ff55c4a169afdfc3de167bb1a962faaedb5b78298fe4452438f20b762f",
+      "source": "dependency-updates/scripts/merge.sh"
+    },
     ".claude/skills/dependency-updates/scripts/posthog-signal.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "9d8624163267ee066c786dea6ee0de61e3ae486c5a337c33f82b79a5bfecfa8e",
+      "sha256": "33e580b1316e504422f39e6d8c564d1cd571c757e723acf4a13a89f0a9b8b48e",
       "source": "dependency-updates/scripts/posthog-signal.sh"
+    },
+    ".claude/skills/dependency-updates/scripts/release-age.sh": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "4f16f1de1052c44cd8d4b976a238217d88443c26b855284eb32560022b0b974c",
+      "source": "dependency-updates/scripts/release-age.sh"
+    },
+    ".claude/skills/dependency-updates/scripts/resolved.sh": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "0fdc5e95f133391d30ab33efe8b5082b357bb79a534f3a2f5000634e2eb8d475",
+      "source": "dependency-updates/scripts/resolved.sh"
+    },
+    ".claude/skills/dependency-updates/scripts/revert-pr.sh": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "daf7227182d036d8df6790911ef1d244559947b79cad3c8a8b4e5a56e1049a65",
+      "source": "dependency-updates/scripts/revert-pr.sh"
+    },
+    ".claude/skills/dependency-updates/scripts/trigger.sh": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "b4c67f0171e717c3fdfe0c652f70b93404db825e7df346c0d7d542d231cf0474",
+      "source": "dependency-updates/scripts/trigger.sh"
     },
     ".claude/skills/dependency-updates/tiers.md": {
       "kind": "file",
@@ -91,7 +145,7 @@
     ".claude/skills/dev-workflow/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "c1132c82f483ea45c020b2a503774aaa14aede467ceb40b09d4fde290a07d3ba",
+      "sha256": "41753330e1d07359a08417429fa0c46696985f6e93273f32936d983b10ff592a",
       "source": "dev-workflow/SKILL.md"
     },
     ".claude/skills/dev-workflow/authority.md": {
@@ -145,7 +199,7 @@
     ".claude/skills/dev-workflow/screenshots.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "08fe966c7a8b94760d4c6efc5f00dc98c36f76272a70bac8e2cc2084f4986019",
+      "sha256": "71775c67c067650a822984dc6b6e3e1438b704795bc5fb140cabc1e76179b291",
       "source": "dev-workflow/screenshots.md"
     },
     ".claude/skills/dev-workflow/scripts/ci-jobs.py": {
@@ -175,13 +229,13 @@
     ".claude/skills/dev-workflow/scripts/loose-ends.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "cb8c2cd5df23b08aceac4a6f882124f7d18713307397c41ab59a4d813cdfc196",
+      "sha256": "8f9900956ea3e3990d08bae014f5a393e9df063681eb359d0a85ef31754c9c7b",
       "source": "dev-workflow/scripts/loose-ends.sh"
     },
     ".claude/skills/dev-workflow/scripts/merge-checkout-proof.py": {
       "kind": "file",
       "mode": 493,
-      "sha256": "45063fcd2785497b875000b088ec303d53228149f9b7017c871d88a6602740ac",
+      "sha256": "043ff9ed7252aa1872c213e4ee882262e6f2448bad1c9ca8ae56bd62ac7b4ebc",
       "source": "dev-workflow/scripts/merge-checkout-proof.py"
     },
     ".claude/skills/dev-workflow/scripts/merge-slot-selftest.sh": {
@@ -199,25 +253,25 @@
     ".claude/skills/dev-workflow/scripts/merge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "ae6b9acc203b53d1090217b00fdcb1b54559b3e294ea5906299ca0cd9aa25227",
+      "sha256": "f2ddbf963db389e6b026bb1db716839c189bfe5dc133b77e8055887a53798349",
       "source": "dev-workflow/scripts/merge.sh"
     },
     ".claude/skills/dev-workflow/scripts/postmerge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "91506c396b7adfd205fc688513db7e383f85d252f9f41147cf05fc327aa1102a",
+      "sha256": "2d1633379bd0bc0e843deb4f6811950894441f3fccecaac0d3c4dfefe35a68f4",
       "source": "dev-workflow/scripts/postmerge.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-gates.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "e78eb05488692566be61ac9cb1bc7998df16583b60b4802e636760e8b7a6b020",
+      "sha256": "19c943a56b810bc1fe92df1809113c4a992e9853a076b4a3f6e8838ece0388ed",
       "source": "dev-workflow/scripts/pr-gates.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-threads.py": {
       "kind": "file",
       "mode": 493,
-      "sha256": "2c21fdb940053911632eba194ba1f306c28f08b3a3298c16a5ca55d46d1a79df",
+      "sha256": "a70c81fa7ff174282a56ec4cb997780d699682e0d6f5ec3059616d480358f8a8",
       "source": "dev-workflow/scripts/pr-threads.py"
     },
     ".claude/skills/dev-workflow/scripts/preflight.sh": {
@@ -321,6 +375,12 @@
       "mode": 420,
       "sha256": "fcfa173660fb781c4c8e6a2e584e652b02b4a61eca1d0d2bf07d9d8e95402087",
       "source": "prompt-engineering/acceptance.md"
+    },
+    ".claude/skills/sdk-upgrade-adoption/bump-battery.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "7815b204409e33d2aa236b14b86728ff0a7fc97e03ca95a44381b1dc0231ed64",
+      "source": "sdk-upgrade-adoption/bump-battery.md"
     },
     ".claude/skills/skill-maintenance/SKILL.md": {
       "kind": "file",

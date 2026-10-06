@@ -21,7 +21,7 @@
 #   remote    per repo whose origin is one of LOOSE_ENDS_OWNERS (default: lz-networks netpilot-labs): open PRs not by
 #             Renovate/Dependabot (author, labels, age, head) · remote branches with no open PR (default / long-lived /
 #             bot / upstream-mirror branches skipped; over REMOTE_MAX=15 in one repo = one summary line)
-#   board     --issues / --project: every named issue, and every board item, that is still open
+#   board     --issues / --project: every named issue, and every board item that is open or has a non-Done status
 #   machine   pr-gates.sh / ci-wait.sh / postmerge.sh / fleet-drive.sh processes · merge-slot holds · the DB lock ·
 #             --scratch <dir> over SCRATCH_MB=5
 #   cloud     only with --cloud, project netpilot-ai: golden-setup-* instances · *preupgrade* snapshots · golden images
@@ -159,7 +159,18 @@ sweep_repo() {
       f ASK-LIN "$name: long-lived branch $b has no origin/$b in this checkout (never pushed?)"; continue; fi
     [ "$L" = "$R" ] && continue
     if git -C "$r" cat-file -e "$R^{commit}" 2>/dev/null; then ahead=$(git -C "$r" rev-list --count "$R..$L"); behind=$(git -C "$r" rev-list --count "$L..$R")
-    else behind="?"; ahead="?"; [ -n "$T" ] && ahead=$(git -C "$r" rev-list --count "$T..$L"); fi   # origin's tip is not in this checkout
+    else
+      # The current remote object is absent locally. A stale tracking ref cannot prove
+      # unpushed work: compare immutable remote/local SHAs through GitHub, never fetch.
+      if [ "$ours" = 1 ] && [ "$rok" = 1 ] && out=$(ghb api "repos/$slug/compare/$R...$L" --jq '"\(.ahead_by)\t\(.behind_by)"' 2>/dev/null); then
+        IFS=$'\t' read -r ahead behind <<< "$out"
+        if ! [[ "$ahead" =~ ^[0-9]+$ && "$behind" =~ ^[0-9]+$ ]]; then
+          unreadable "$name: $b relationship to current origin/$b ${R:0:7} is unreadable — unpushed work NOT asserted"; continue
+        fi
+      else
+        unreadable "$name: $b relationship to current origin/$b ${R:0:7} is unreadable — unpushed work NOT asserted"; continue
+      fi
+    fi
     if [ "$ahead" != 0 ]; then ct=$(git -C "$r" log -1 --format=%ct "$L"); d=ASK-LIN; recent "$ct" && d='MINE?'
       f "$d" "$name: $b is $ahead commit(s) AHEAD of origin/$b (unpushed; $behind behind), last commit $(day "$ct")"
     elif [ $rok != 1 ]; then :
@@ -258,7 +269,7 @@ walk() {   # <dir> <depth>: depth 1 = the per-repo containers under worktrees/ (
   done
 }
 
-board() {   # <N> | <owner>/<N>: every non-archived item whose issue/PR is still open (a draft item: status not Done)
+board() {   # <N> | <owner>/<N>: every non-archived open issue/PR or non-Done item (open deferred residuals remain visible)
   local o=lz-networks n=$1 c="" j rows ref state status title
   case "$n" in */*) o=${n%%/*}; n=${n##*/};; esac
   [[ "$n" =~ ^[0-9]+$ ]] || { unreadable "--project '$1' is not <N> or <owner>/<N>"; return; }
@@ -272,7 +283,7 @@ board() {   # <N> | <owner>/<N>: every non-archived item whose issue/PR is still
       .data.repositoryOwner.projectV2.items.nodes[] | select(.isArchived | not) | (.fieldValueByName.name // "none") as $s | .content as $c
       | if $c == null then ["an item this login cannot read", "?", $s, ""]
         elif $c.__typename == "DraftIssue" then (if $s == "Done" then empty else ["draft item", "OPEN", $s, $c.title[0:70]] end)
-        elif $c.state == "OPEN" then ["\($c.repository.nameWithOwner)#\($c.number)", "OPEN", $s, $c.title[0:70]] else empty end | @tsv' <<< "$j" 2>/dev/null) \
+        elif $c.state == "OPEN" or $s != "Done" then ["\($c.repository.nameWithOwner)#\($c.number)", $c.state, $s, $c.title[0:70]] else empty end | @tsv' <<< "$j" 2>/dev/null) \
       || { unreadable "board $o/$n: a page of items could not be parsed — NOT checked"; return; }
     while IFS=$'\t' read -r ref state status title; do [ -n "$ref" ] && f 'MINE?' "board $n: $ref $state (status $status) $title"; done <<< "$rows"
     [ "$(jq -r '.data.repositoryOwner.projectV2.items.pageInfo.hasNextPage' <<< "$j")" = true ] || break

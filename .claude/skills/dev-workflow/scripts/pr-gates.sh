@@ -254,7 +254,7 @@ report() {
   read_runs() {
     local data rows path run_id status conclusion proof rc
     data=$(gh api "repos/$REPO/actions/runs?head_sha=$head&event=pull_request&per_page=100" --paginate --slurp 2>/dev/null) || return 2
-    rows=$(printf '%s\n' "$data" | jq -r "[.[].workflow_runs[]|$sel]|group_by(.workflow_id)|map(sort_by(.created_at)|last)|.[]|[(.path|split(\"@\")[0]),(.id|tostring),.status,(.conclusion // \"\")]|@tsv" 2>/dev/null) || return 2
+    rows=$(printf '%s\n' "$data" | jq -r "[.[].workflow_runs[]|$sel]|group_by(.workflow_id)|map(sort_by(.created_at,.id)|last)|.[]|[(.path|split(\"@\")[0]),(.id|tostring),.status,(.conclusion // \"\")]|@tsv" 2>/dev/null) || return 2
     while IFS=$'\t' read -r path run_id status conclusion; do
       [ -n "$path" ] || continue
       if [ "$status" = completed ] && [ "$conclusion" = success ] && [ "$IS_DRAFT" != true ]; then
@@ -318,10 +318,9 @@ report() {
     # invisible in the head's run list, so the required set comes from this PR's own run history:
     # every workflow required-workflows.sh names must have a run on the current head (PR #23 R4).
     local expected missing="" have expected_lines touched="" wfbroken=0
-    # Required set = required-workflows.sh (ran on THIS PR since it opened, still active — keyed by PATH), MINUS any workflow file this
-    # PR touches: a PR that edits .github/workflows/ is a never-auto surface (SKILL.md guardrails), so its own
-    # workflows are not demanded here and no YAML is parsed (#27 R3 redesign: quoted triggers, spaces, nameless
-    # and renamed files all stop mattering). Both reads fail CLOSED.
+    # Required set includes active PR-associated history and definitely matching unseen PR declarations.
+    # Unsupported declaration syntax fails closed. Added/removed/renamed workflow paths remain
+    # excluded here under the existing guarded-workflow-change policy; modified workflows must run.
     # a MODIFIED workflow keeps its historical entry (it must still run); only added/removed/renamed paths leave (#27 R4 P1)
     if ! touched="$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[]|select(.filename|startswith(".github/workflows/"))|select(.status!="modified")|.filename, (.previous_filename // empty)' 2>/dev/null)"; then wfbroken=1; fi
     if ! expected_lines="$("$(dirname "$0")/required-workflows.sh" "$REPO" "$PR")"; then wfbroken=1; fi
@@ -474,8 +473,11 @@ while :; do
   if [ "$IS_DRAFT" != "true" ] && [ "$VERDICT_ON_HEAD" = 1 ] && [ "$POSTREQ" != 1 ]; then
     # only the PICKED-UP-but-unanswered shape (👀 on the latest request); no 👀 is escalate_if_no_ack's case
     PF_REQID="$(gh api "repos/$REPO/issues/$PR/comments" --paginate --jq '[.[]|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]")|not)|select((.author_association // "")|IN("OWNER","MEMBER","COLLABORATOR"))|select(.body|test("@codex review";"i"))]|last|.id // empty' 2>/dev/null | tail -1)"
-    PF_EYES=0; [ -n "$PF_REQID" ] && PF_EYES="$(gh api "repos/$REPO/issues/comments/$PF_REQID/reactions" --paginate --slurp 2>/dev/null | jq -r '[.[].[]|select(.content=="eyes")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))]|length' 2>/dev/null)" || { echo "BROKEN: cannot read request reactions — trust nothing"; exit 2; }
-  [[ "${PF_EYES}" =~ ^[0-9]+$ ]] || { echo "BROKEN: unreadable request reactions — trust nothing"; exit 2; }
+    PF_EYES=0
+    if [ -n "$PF_REQID" ]; then
+      PF_EYES="$(gh api "repos/$REPO/issues/comments/$PF_REQID/reactions" --paginate --slurp 2>/dev/null | jq -r '[.[].[]|select(.content=="eyes")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))]|length' 2>/dev/null)" || { echo "BROKEN: cannot read request reactions — trust nothing"; exit 2; }
+      [[ "$PF_EYES" =~ ^[0-9]+$ ]] || { echo "BROKEN: unreadable request reactions — trust nothing"; exit 2; }
+    fi
     PF_SINCE=$(( $(date +%s) - $(python3 -c "import sys,datetime;print(int(datetime.datetime.fromisoformat(sys.argv[1].replace('Z','+00:00')).timestamp()))" "$REQTS" 2>/dev/null || echo 0) ))
     if [ "${PF_EYES:-0}" -gt 0 ] && [ "$PF_REREQ" = 0 ] && [ "$PF_SINCE" -ge 900 ]; then
       echo "  post-flip request unanswered for 15 min on an already-verdicted head — ONE automatic re-request (#22)"

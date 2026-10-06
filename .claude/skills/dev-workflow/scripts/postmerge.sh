@@ -45,10 +45,10 @@ R=${1:?repo}; sha=${2:?merge sha (full 40-char)}; shift 2
 OWNER=$(owner_of "$R")
 window=1h; skip_sentry=0
 while [ $# -gt 0 ]; do case "$1" in --sentry-window) window=$2; shift 2;; --skip-sentry) skip_sentry=1; shift;; *) echo "unknown arg $1" >&2; exit 2;; esac; done
-[ ${#sha} -eq 40 ] || { echo "merge sha must be the full 40-char oid (gotchas: never hand-type one)" >&2; exit 2; }
+[[ "$sha" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "merge sha must be the full 40-char oid (gotchas: never hand-type one)" >&2; exit 2; }
 folder=$R; [ "$R" = TopoViewer ] && folder=topoViewer
 ws=${WORKSPACE:-$(cd "$(dirname "$0")/../../../.." && pwd)}; [ -d "$ws/$folder/.git" ] || ws=$(cd "$ws/.." && pwd)
-red=0; broken=0; review=0; ci_only=""; outage=0
+red=0; broken=0; review=0; ci_only=""; outage=0; ph_since=""
 say() { printf '%s %s\n' "$(date -u +%H:%M:%SZ)" "$*"; }
 SLOT="$(cd "$(dirname "$0")" && pwd)/merge-slot.sh"
 # The repo is settled BEFORE the settle trap is armed: a repo with no deploy on merge has nothing to watch and an unknown
@@ -191,7 +191,7 @@ vercel_wait() {  # route url [version-url]
       v=$(curl -fsS -m 15 -H "Cache-Control: no-cache" "$2" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))' 2>/dev/null) || v=""
       [ "$v" = "$sha" ] && break; sleep 10
     done
-    if [ "$v" = "$sha" ]; then say "version stamp $v"
+    if [ "$v" = "$sha" ]; then ph_since=$(( $(date +%s) + 1 )); say "version stamp $v"
     else say "BROKEN: version.json did not prove ${sha:0:8} live after six reads (last stamp: ${v:-unreadable}) — verify the deployment before releasing the merge slot"; broken=1; fi
   fi
 }
@@ -220,14 +220,17 @@ case "$R" in
     # even when that operational skill is not enabled. Missing installation is not signal proof.
     phs="$(dirname "$0")/../../dependency-updates/scripts/posthog-signal.sh"
     if [ -x "$phs" ]; then
-      pout=$("$phs" --window 15m); prc=$?; say "$pout"
+      if [ -z "$ph_since" ]; then say "BROKEN: no verified deployed version boundary for PostHog"; broken=1
+      else
+      pout=$("$phs" --since "$ph_since"); prc=$?; say "$pout"
       # the helper's status is the gate's (Codex, netpilot-skills PR#45): 2 = unavailable/failed → BROKEN; 1 = 0 events → REVIEW (exit 3)
       case $prc in 0) ;; 2) say "BROKEN: posthog signal unavailable — no capture signal read"; broken=1;; 1) review=1;; *) say "BROKEN: posthog signal helper exited $prc — no capture signal read"; broken=1;; esac
+      fi
     else say "BROKEN: required posthog signal helper missing or not executable — no capture signal read"; broken=1; fi;;
   netpilot-marketing)
     vercel_wait https://www.netpilot.io/;;
 esac
-[ $outage = 1 ] && { say "RESULT: RED — production answers non-200 (health / route samples above): ROLL BACK first (dependency-updates/scripts/revert-pr.sh, or git revert + self-merge; the platform rollback buys the minutes — deploy.md), then report"; exit 1; }
+[ $outage = 1 ] && { say "RESULT: RED — production answers non-200 (health / route samples above): ROLL BACK first ($(dirname "$SLOT")/../../dependency-updates/scripts/revert-pr.sh, or git revert + self-merge; the platform rollback buys the minutes — deploy.md), then report"; exit 1; }
 # A failure next to an unread or unattributed impact signal is never called "no user impact" (Codex, skills PR#54)
 [ $red = 1 ] && [ $broken = 1 ] && { say "RESULT: RED — a deploy or main-run failure above AND a signal that could not be read (BROKEN line above): the impact is UNKNOWN — look by hand now; an outage or many users hit = roll back, else fix forward (deploy.md)"; exit 1; }
 [ $red = 1 ] && [ $review = 1 ] && { say "RESULT: RED — a deploy or main-run failure above AND a REVIEW line (new Sentry groups / 0 PostHog events): attribute it first — count the users and events on each group; many users hit = roll back, else fix forward (deploy.md)"; exit 1; }

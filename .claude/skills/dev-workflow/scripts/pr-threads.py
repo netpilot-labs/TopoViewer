@@ -61,12 +61,21 @@ def main(argv):
             print(f"{'resolved' if t['isResolved'] else 'OPEN    '} thread={t['id']} comment={cid} {c['path']}:{c['line'] or c['originalLine']}")
         return
 
+    if not isinstance(replies, dict):
+        raise SystemExit("replies must be an object keyed by comment id")
+    plan = []
     for cid, spec in replies.items():
         t = by_comment.get(cid)
         if t is None:
             raise SystemExit(f"no review thread starts with comment {cid} (run --dry-run to list)")
-        if isinstance(spec, str):  # a bare string = {"text": ..., "resolve": true} (mkt PR#243, 2026-10-04)
+        if isinstance(spec, str):
             spec = {"text": spec, "resolve": True}
+        if (not isinstance(spec, dict) or not isinstance(spec.get("text"), str)
+                or not spec["text"].strip() or not isinstance(spec.get("resolve", False), bool)):
+            raise SystemExit(f"invalid reply payload for {cid}: nonempty text and boolean resolve required")
+        plan.append((cid, t, spec))
+
+    for cid, t, spec in plan:
         text = spec["text"].replace("<sha>", sha)
         r = subprocess.run(
             ["gh", "api", f"repos/{repo}/pulls/{pr}/comments/{cid}/replies", "-X", "POST", "--input", "-"],
