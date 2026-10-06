@@ -27,7 +27,8 @@ Run it at each trigger — never batch into "later"; later never fires:
   changed. A retraction is a first-class lesson: bake the diagnosis that would have prevented
   the wrong path, not just the fix.
 
-Copy this checklist and work through it:
+Copy this checklist and work through it. For lint, set `SKILL_DIR` to the directory
+containing this loaded SKILL.md and `WORKTREE` to the canonical scratch clone; quote both paths.
 
 ```
 Learning pass:
@@ -36,9 +37,9 @@ Learning pass:
 - [ ] 3. Deduped — grep the skills for an existing statement; update it, never restate
 - [ ] 4. Tiered — fact-based edit (self-serve) or policy change (ask Lin)? See the charter
 - [ ] 5. Shipped — edit in a scratch clone of the canonical repo (see the ship duty); for dev-workflow run the lint (ONE shell line, pointed at the WORKTREE's files):
-        /Users/linzhu/git_projects/NetPilot-Claude/.claude/skills/dev-workflow/scripts/lessons-lint.sh <your-worktree>/dev-workflow
+        bash "$SKILL_DIR/../dev-workflow/scripts/lessons-lint.sh" "$WORKTREE/dev-workflow"
         and clear its HARD lines (without the argument it checks its own, unchanged copy; when the
-        script itself changed, run the worktree's copy: <your-worktree>/dev-workflow/scripts/lessons-lint.sh) (a soft-cap WARN means cut, or extract a concern to its own file, before adding); commit + push; sync-all.sh; commit consumers
+        script itself changed, run the worktree's copy: bash "$WORKTREE/dev-workflow/scripts/lessons-lint.sh" "$WORKTREE/dev-workflow") (a soft-cap WARN means cut, or extract a concern to its own file, before adding); commit + push; sync-all.sh; commit consumers
 ```
 
 ## The earned-content test (every line passes ALL THREE)
@@ -175,8 +176,7 @@ drifted in the same PR; snapshots, one-off evidence (sizing counts, a run's numb
 PR or memory, never the skill — a tag, never the narrative; an evidence-based POLICY amendment still names
 its evidencing event in ONE clause, as the charter requires, never the narrative (Lin, 2026-09-26: two skills carried a retired positioning line for
 two days after the canonical doc changed). Every ~10 merges to a skill, run a prune pass — the earned-content tests applied to EXISTING lines
-(`/Users/linzhu/git_projects/NetPilot-Claude/.claude/skills/dev-workflow/scripts/lessons-lint.sh <worktree>/dev-workflow`
-for dev-workflow); a skill that only grows is failing
+(use the Shipped lint command above for dev-workflow); a skill that only grows is failing
 (board 30, 2026-09-28). Before cutting, list the skill's commits from the last ~14 days: a rule that young has no
 memory file yet, so it survives only as a bullet (PR #21 R1 dropped a two-day-old rule). After editing a section, re-scan its siblings and its SKILL.md
 pointer for new duplication or drift before finishing.

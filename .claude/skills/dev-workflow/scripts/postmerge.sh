@@ -11,8 +11,8 @@
 #   NetPilot-2-Frontend / netpilot-marketing   Vercel deployment for the sha reaches `success`,
 #                                        then a route load (app: /sign-in 200 + version.json
 #                                        stamps the sha; marketing: / 200).
-#   containerlab-mcp / netpilot-skills / netpilot-probe-lab   no deploy on merge: ONE RESULT line (with the `main`
-#                                        push runs for the sha, read once, never waited for), exit 0, no hold recorded.
+#   No-deploy repos: exit 0 only after required default-branch push workflows/jobs are verified
+#                                        within a 25-minute wait, or the repository has no workflows.
 #                                        A hold already kept for that sha is freed only when those runs are all
 #                                        completed/success (or the repo has no workflows).
 # Exit: 0 clean · 1 RED · 2 broken/timeout (trust nothing; look by hand)
@@ -51,35 +51,68 @@ ws=${WORKSPACE:-$(cd "$(dirname "$0")/../../../.." && pwd)}; [ -d "$ws/$folder/.
 red=0; broken=0; review=0; ci_only=""; outage=0; ph_since=""
 say() { printf '%s %s\n' "$(date -u +%H:%M:%SZ)" "$*"; }
 SLOT="$(cd "$(dirname "$0")" && pwd)/merge-slot.sh"
-# The repo is settled BEFORE the settle trap is armed: a repo with no deploy on merge has nothing to watch and an unknown
-# name is a typo — neither may write a hold into a merge slot (`unknown repo` did, as a late BROKEN nobody could clear:
+# The repo is settled BEFORE the deployment settle trap is armed. No-deploy repos verify CI
+# without creating a deployment hold; an unknown name is a typo — neither creates a new hold (`unknown repo` did, as a late BROKEN nobody could clear:
 # clab PR#264, 2026-10-02). A hold ALREADY kept for this sha (that stale one; merge.sh's "base moved inside the window")
-# is freed only on a verified main — every push run for the sha completed/success on a merge at least RUNS_APPEAR_S old
+# is freed only on a verified main — every relevant push run/job for the sha completed/success on a merge at least RUNS_APPEAR_S old
 # (so no workflow's run is still to be minted), or a repo with no workflows; an unreadable, missing, running or failed run
 # leaves it held (Codex, skills PR#60). No other holder is touched.
 case "$R" in
   NetPilot-2-Backend|NetPilot-2-LB|NetPilot-2-Frontend|netpilot-marketing) ;;
   containerlab-mcp|netpilot-skills|netpilot-probe-lab|netpilot-devops|netpilot-dev|netpilot-lead-desk|netpilot-support-desk|netpilot-marketing-monitor|3rd-party-apps|TopoViewer)
-    runs=$(gh api "repos/$OWNER/$R/actions/runs?head_sha=$sha&event=push&per_page=100" --paginate --jq '[.workflow_runs[]|"\(.path | split("@")[0]) \(.name) \(.status)/\(.conclusion // "-")"]|join(", ")') || runs="UNREADABLE"
     wf=$(gh api "repos/$OWNER/$R/actions/workflows" --jq .total_count) || wf="UNREADABLE"
-    # a push run is minted within seconds of the merge; before RUNS_APPEAR_S a green list may still be missing a workflow
-    age=$(gh api "repos/$OWNER/$R/commits/$sha" --jq .commit.committer.date | python3 -c 'import sys,datetime,time; print(int(time.time()-datetime.datetime.fromisoformat(sys.stdin.read().strip().replace("Z","+00:00")).timestamp()))' 2>/dev/null) || age=""
-    verified=0; RUNS_APPEAR_S=180; expected_push=""
-    # Explicit current default-branch push policy; tag/dispatch-only releases are excluded.
-    # Unknown positive workflow inventories cannot prove a complete expected set.
+    expected_push=""
     case "$R" in
       containerlab-mcp) expected_push=.github/workflows/test.yml;;
       TopoViewer) expected_push=.github/workflows/ci.yml;;
       netpilot-probe-lab) expected_push=.github/workflows/probe-lab-checks.yml;;
     esac
-    if [ "$wf" = 0 ]; then verified=1; runs="none (the repo has no workflows)"
-    elif [[ "$wf" =~ ^[0-9]+$ ]] && [ "$wf" -gt 0 ] && [ -n "$expected_push" ] && printf '%s\n' "$runs" | tr ',' '\n' | awk 'NF{print $1}' | grep -qxF "$expected_push" \
-      && [ -n "$runs" ] && [ "$runs" != UNREADABLE ] && [[ "$age" =~ ^[0-9]+$ ]] && [ "$age" -ge $RUNS_APPEAR_S ] \
-      && ! printf '%s\n' "$runs" | tr ',' '\n' | grep -qvE ' completed/success$'; then verified=1; fi
-    say "RESULT: no deploy on merge for $R — nothing to watch. default-branch push run(s) for ${sha:0:8}: ${runs:-none yet} (read once: follow any that is not completed/success); the repo's own post-merge step is in deploy.md"
-    if [ $verified = 1 ]; then [ -x "$SLOT" ] && "$SLOT" settle "$OWNER/$R" "$sha" clean
-    else [ -x "$SLOT" ] && "$SLOT" peek "$OWNER/$R" | grep -q . && say "main is not verified for ${sha:0:8}: a merge-slot hold kept for this sha stays — re-run this once the run is green"; fi
-    exit 0;;
+    if [ "$wf" = 0 ] && [ -z "$expected_push" ]; then
+      say "RESULT: no deploy on merge for $R — no workflows; no default-branch CI to wait for"
+      [ -x "$SLOT" ] && "$SLOT" settle "$OWNER/$R" "$sha" clean
+      exit 0
+    fi
+    if ! [[ "$wf" =~ ^[0-9]+$ ]] || [ "$wf" = 0 ] || [ -z "$expected_push" ]; then
+      say "RESULT: BROKEN — unreadable or unsupported required default-branch push workflow inventory for $R; any existing hold stays"
+      exit 2
+    fi
+    default=$(gh api "repos/$OWNER/$R" --jq .default_branch) || default=""
+    [ -n "$default" ] && [ "$default" != null ] || { say "RESULT: BROKEN — cannot read default branch for $R"; exit 2; }
+    deadline=$(( $(date +%s) + 25*60 )); RUNS_APPEAR_S=180
+    while :; do
+      # Scope immutable merge SHA, event and actual default branch before choosing latest runs.
+      raw=$(gh api "repos/$OWNER/$R/actions/runs?head_sha=$sha&event=push&per_page=100" --paginate --slurp) || { say "RESULT: BROKEN — cannot read default-branch push runs"; exit 2; }
+      runs=$(printf '%s' "$raw" | jq -c --arg head "$sha" --arg branch "$default" '
+        [.[].workflow_runs[] | select(.head_sha==$head and .head_branch==$branch and .event=="push")
+          | .path=(.path|split("@")[0])] | group_by(.path) | map(sort_by(.created_at,.id)|last)') || { say "RESULT: BROKEN — unreadable push run inventory"; exit 2; }
+      present=$(printf '%s' "$runs" | jq -r --arg path "$expected_push" 'any(.[]; .path==$path)')
+      pending=0
+      if [ "$present" != true ]; then pending=1; fi
+      while IFS=$'\t' read -r id path status conclusion; do
+        [ -n "$id" ] || continue
+        if [ "$status" != completed ]; then pending=1; continue; fi
+        case "$conclusion" in
+          success) ;;
+          failure|cancelled|timed_out|action_required|startup_failure) say "RESULT: RED — default-branch push workflow $path ended $conclusion for ${sha:0:8}"; exit 1;;
+          *) say "RESULT: BROKEN — default-branch push workflow $path did not prove success ($conclusion)"; exit 2;;
+        esac
+        python3 "$(dirname "$0")/ci-jobs.py" "$OWNER/$R" "$id" "$path" "$sha"; job_rc=$?
+        case "$job_rc" in
+          0) ;;
+          1) say "RESULT: RED — required default-branch jobs did not succeed for $path"; exit 1;;
+          *) say "RESULT: BROKEN — required default-branch jobs unreadable for $path"; exit 2;;
+        esac
+      done < <(printf '%s' "$runs" | jq -r '.[]|[.id,.path,.status,(.conclusion // "-")]|@tsv')
+      age=$(gh api "repos/$OWNER/$R/commits/$sha" --jq .commit.committer.date | python3 -c 'import sys,datetime,time; print(int(time.time()-datetime.datetime.fromisoformat(sys.stdin.read().strip().replace("Z","+00:00")).timestamp()))' 2>/dev/null) || { say "RESULT: BROKEN — merge commit age unreadable"; exit 2; }
+      if [ "$pending" = 0 ] && [[ "$age" =~ ^[0-9]+$ ]] && [ "$age" -ge $RUNS_APPEAR_S ]; then
+        say "RESULT: no deploy on merge for $R — required default-branch push workflows/jobs verified for ${sha:0:8}"
+        [ -x "$SLOT" ] && "$SLOT" settle "$OWNER/$R" "$sha" clean
+        exit 0
+      fi
+      [ "$(date +%s)" -ge "$deadline" ] && { say "RESULT: BROKEN — required default-branch push CI missing or pending after 25 minutes for ${sha:0:8}; any existing hold stays"; exit 2; }
+      say "default-branch push CI for ${sha:0:8} missing/pending — waiting"
+      sleep 20
+    done;;
   *) echo "unknown repo $R — deploy repos: NetPilot-2-Backend NetPilot-2-LB NetPilot-2-Frontend netpilot-marketing; no deploy on merge: containerlab-mcp netpilot-skills netpilot-probe-lab netpilot-devops netpilot-dev netpilot-lead-desk netpilot-support-desk netpilot-marketing-monitor 3rd-party-apps topoViewer" >&2; exit 2;;
 esac
 # merge-slot.sh settle on EVERY exit: clean frees the repo's merge slot; RED/BROKEN/REVIEW (an interrupted watch is
@@ -227,22 +260,35 @@ case "$R" in
       # fifteen minutes; an API failure remains BROKEN rather than being retried away.
       ph_nonce=$(python3 -c 'import secrets; print(secrets.token_hex(16))') || { say "BROKEN: cannot create deployment capture probe"; exit 2; }
       ph_url="https://app.netpilot.io/sign-in?netpilot_deploy_probe=$sha.$ph_nonce"
-      say "PostHog probe: open $ph_url in a FRESH browser tab now; confirm the loaded deployment is $sha (deploy.md). Do not manufacture a capture via API."
-      ph_deadline=$(( $(date +%s) + POSTHOG_WAIT_S ))
-      for ((ph_attempt=1; ph_attempt<=30; ph_attempt++)); do
-        sleep 30
-        pout=$("$phs" --since "$ph_since" --capture-url "$ph_url"); prc=$?
-        case $prc in
-          0) say "$pout"; break;;
-          2) say "$pout"; say "BROKEN: posthog signal unavailable — no capture signal read"; broken=1; break;;
-          1)
-            if [ "$ph_attempt" -eq 30 ] || [ "$(date +%s)" -ge "$ph_deadline" ]; then
-              say "$pout"; review=1; break
-            fi
-            say "posthog: awaiting capture after verified deployment (poll $ph_attempt/30)";;
-          *) say "$pout"; say "BROKEN: posthog signal helper exited $prc — no capture signal read"; broken=1; break;;
-        esac
-      done
+      pout=$("$phs" --check-config); prc=$?
+      if [ "$prc" -ne 0 ]; then
+        say "$pout"; say "BROKEN: posthog signal helper exited $prc — no capture signal read"; broken=1
+      elif [ ! -f "$(dirname "$0")/browser-capture-probe.py" ]; then
+        say "BROKEN: required isolated browser capture helper missing"; broken=1
+      else
+        say "PostHog probe: loading $ph_url in an isolated empty-cache browser."
+        pout=$(python3 "$(dirname "$0")/browser-capture-probe.py" "$ph_url" "$sha"); prc=$?
+        if [ "$prc" -ne 0 ]; then
+          say "$pout"; say "BROKEN: isolated deployment browser probe failed ($prc)"; broken=1
+        else
+          say "$pout"
+          ph_deadline=$(( $(date +%s) + POSTHOG_WAIT_S ))
+          for ((ph_attempt=1; ph_attempt<=30; ph_attempt++)); do
+            sleep 30
+            pout=$("$phs" --since "$ph_since" --capture-url "$ph_url"); prc=$?
+            case $prc in
+              0) say "$pout"; break;;
+              2) say "$pout"; say "BROKEN: posthog signal unavailable — no capture signal read"; broken=1; break;;
+              1)
+                if [ "$ph_attempt" -eq 30 ] || [ "$(date +%s)" -ge "$ph_deadline" ]; then
+                  say "$pout"; review=1; break
+                fi
+                say "posthog: awaiting capture after verified deployment (poll $ph_attempt/30)";;
+              *) say "$pout"; say "BROKEN: posthog signal helper exited $prc — no capture signal read"; broken=1; break;;
+            esac
+          done
+        fi
+      fi
       fi
     else say "BROKEN: required posthog signal helper missing or not executable — no capture signal read"; broken=1; fi;;
   netpilot-marketing)

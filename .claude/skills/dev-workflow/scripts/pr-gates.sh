@@ -188,7 +188,10 @@ report() {
         |select(.createdAt > \"$reqts\")]|length")"
 
   # --- CHANNEL 3: threads-only round (no review body, no comment) --------
-  local c3
+  local c3 c3head
+  c3head="$(gq "[.data.repository.pullRequest.reviewThreads.nodes[]
+        |select(.comments.nodes[0].author.login|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\"))
+        |select(.comments.nodes[0].originalCommit.oid==\"$head\")]|length")"
   c3="$(gq "[.data.repository.pullRequest.reviewThreads.nodes[]
         |select(.comments.nodes[0].author.login|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\"))
         |select(.comments.nodes[0].originalCommit.oid==\"$head\")
@@ -215,10 +218,11 @@ report() {
         |select(.body|contains(\"$head10\"))
         |select(.createdAt > \"$reqts\")]|length")"
   reqid="$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
-          --jq "[.[]|select((.user.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\")|not)|select((.author_association // \"\")|IN(\"OWNER\",\"MEMBER\",\"COLLABORATOR\"))|select(.body|test(\"@codex review\";\"i\"))]|last|.id // empty" 2>/dev/null | tail -1)"
+          --jq "[.[]|select((.user.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\")|not)|select((.author_association // \"\")|IN(\"OWNER\",\"MEMBER\",\"COLLABORATOR\"))|select(.body|test(\"@codex review\";\"i\"))]|last|.id // empty" 2>/dev/null | tail -1)" || { echo "BROKEN: cannot read review request comments"; exit 2; }
   thumbs=0
   if [ -n "$reqid" ]; then
-    thumbs="$(gh api "repos/$REPO/issues/comments/$reqid/reactions" --paginate --slurp 2>/dev/null | jq -r --arg reqts "$reqts" '[.[].[]|select(.content=="+1")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))|select(.created_at > $reqts)]|length' 2>/dev/null)"
+    thumbs="$(gh api "repos/$REPO/issues/comments/$reqid/reactions" --paginate --slurp 2>/dev/null | jq -r --arg reqts "$reqts" 'if type != "array" or any(.[]; type != "array") then error("invalid reaction pages") else . end | [.[].[]|select(.content=="+1")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))|select(.created_at > $reqts)]|length' 2>/dev/null)" || { echo "BROKEN: cannot read request-comment reactions"; exit 2; }
+    [[ "$thumbs" =~ ^[0-9]+$ ]] || { echo "BROKEN: invalid request-comment reactions"; exit 2; }
   fi
   # Codex's 👍 lands on the PR ISSUE, never on the request comment (verified
   # FE PR#524 + PR#528, 2026-09-14: zero codex reactions on four request
@@ -228,7 +232,8 @@ report() {
   # "predates the latest request"). Codex re-creates the 👍 per round, so
   # created_at > reqts is the round-after-request test.
   local prthumbs
-  prthumbs="$(gh api "repos/$REPO/issues/$PR/reactions" --paginate --slurp 2>/dev/null | jq -r "[.[].[]|select(.content==\"+1\")|select((.user.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\"))|select(.created_at > \"$reqts\")]|length" 2>/dev/null)"
+  prthumbs="$(gh api "repos/$REPO/issues/$PR/reactions" --paginate --slurp 2>/dev/null | jq -r "if type != \"array\" or any(.[]; type != \"array\") then error(\"invalid reaction pages\") else . end | [.[].[]|select(.content==\"+1\")|select((.user.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\"))|select(.created_at > \"$reqts\")]|length" 2>/dev/null)" || { echo "BROKEN: cannot read PR reactions"; exit 2; }
+  [[ "$prthumbs" =~ ^[0-9]+$ ]] || { echo "BROKEN: invalid PR reactions"; exit 2; }
   POSTREQ=0
   [ "${pq1:-0}" -gt 0 ] && POSTREQ=1
   [ "${pq2:-0}" -gt 0 ] && POSTREQ=1
@@ -242,7 +247,7 @@ report() {
   say "  unresolved threads : $unres"
   say "  ch1 codex review   : ${c1n:-0} on head"
   say "  ch2 codex comment  : $([ -n "$c2" ] && echo yes || echo no) (head-match, time-blind)$([ "${CF_FOUND:-0}" != 0 ] && echo " — findings carried in Codex comments on this head: $CF_FOUND, still open: $CF_OPEN")"
-  say "  ch3 codex threads  : ${c3:-0} since request"
+  say "  ch3 codex threads  : ${c3head:-0} on head; ${c3:-0} since request"
   say "  post-request       : $([ "$POSTREQ" = 1 ] && echo yes || echo no) (answer after latest request $reqts; gates non-draft$([ "${prthumbs:-0}" -gt 0 ] && echo '; 👍 on the PR after the request'))"
 
   # --- CI: NAMED checks on the head, at JOB level, two agreeing reads ----
@@ -344,7 +349,7 @@ report() {
   VERDICT_ON_HEAD=0
   [ "${c1n:-0}" -gt 0 ] && VERDICT_ON_HEAD=1
   [ -n "$c2" ] && VERDICT_ON_HEAD=1
-  [ "${c3:-0}" -gt 0 ] && VERDICT_ON_HEAD=1
+  [ "${c3head:-0}" -gt 0 ] && VERDICT_ON_HEAD=1
   UNRES="$unres"
 }
 

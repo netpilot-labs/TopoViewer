@@ -1,5 +1,9 @@
 {
   "entries": {
+    ".agents/skills/dependency-updates": {
+      "kind": "link",
+      "target": "../../.claude/skills/dependency-updates"
+    },
     ".agents/skills/dev-workflow": {
       "kind": "link",
       "target": "../../.claude/skills/dev-workflow"
@@ -64,11 +68,23 @@
       "sha256": "784403441f2724f2ae4fb882cad38be6f06f84027b7fd63743c02ace4e653a51",
       "source": "agent-configuration.md"
     },
+    ".claude/skills/dependency-updates/SKILL.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "a1fe8db6387dbde62a08a51e82fed9c20596ee5c20e8cd34e2cb30ea8451be5b",
+      "source": "dependency-updates/SKILL.md"
+    },
     ".claude/skills/dependency-updates/gotchas.md": {
       "kind": "file",
       "mode": 420,
       "sha256": "bb946b8bb84d9683080d164dd2b84fb73ca2c1a58e65991189c5661be7d2849e",
       "source": "dependency-updates/gotchas.md"
+    },
+    ".claude/skills/dependency-updates/learning.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "4287ae38687b8c9948d0ecdf5e0f13b42197b49ab127a481d5c364f6f60cfe8f",
+      "source": "dependency-updates/learning.md"
     },
     ".claude/skills/dependency-updates/mechanics.md": {
       "kind": "file",
@@ -85,13 +101,13 @@
     ".claude/skills/dependency-updates/scripts/dashboard.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "e53d70ad59d68e20d70269803583bdd336cf3101fc627d79e3732f6f1c543d94",
+      "sha256": "425ecc98f9822ebc94bb966ea31c61fbbb6fe59a539d23b7d541ead57c38782d",
       "source": "dependency-updates/scripts/dashboard.sh"
     },
     ".claude/skills/dependency-updates/scripts/inventory.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "7de50cd021655115ada20083f4857fa01f639d8fa32c7827d351789f126800d8",
+      "sha256": "dbc5b765ebe24b4c07edcb5f9918c04cb2f7d96a093bd0af86ca22615b262c82",
       "source": "dependency-updates/scripts/inventory.sh"
     },
     ".claude/skills/dependency-updates/scripts/lockdiff.sh": {
@@ -109,7 +125,7 @@
     ".claude/skills/dependency-updates/scripts/posthog-signal.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "7f4e7cc81b54c5a5e8631c546de3e3f940e6fc9b2130d2d491c28752b26541d9",
+      "sha256": "86836df1649fd1698ebac9feb2b6df2326e4d5c3c6b1f6407161ae6c64bf561e",
       "source": "dependency-updates/scripts/posthog-signal.sh"
     },
     ".claude/skills/dependency-updates/scripts/release-age.sh": {
@@ -163,13 +179,13 @@
     ".claude/skills/dev-workflow/deploy.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "8944e97f215c47bb7efe6cb7217c3c24c80d1dadc8a253bf9f54438d7325040c",
+      "sha256": "7e40843c45bd78bffbbb9f716f1cd40f398e993c20bb4b7f3efeabbba0c66314",
       "source": "dev-workflow/deploy.md"
     },
     ".claude/skills/dev-workflow/lane-brief.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "073d3a9434621e5deec94aa30b5ff341cd1a6a479fb99ae3a1dc30e730469963",
+      "sha256": "15d3d08026ba780f3aafea3daefa8e2c14927557d8a2bcde55464e07f96ae314",
       "source": "dev-workflow/lane-brief.md"
     },
     ".claude/skills/dev-workflow/lanes.md": {
@@ -202,6 +218,12 @@
       "sha256": "71775c67c067650a822984dc6b6e3e1438b704795bc5fb140cabc1e76179b291",
       "source": "dev-workflow/screenshots.md"
     },
+    ".claude/skills/dev-workflow/scripts/browser-capture-probe.py": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "ac9713b3340aad9d5436ce19db36d6c61cc5136da179885f3a476bae4bf6fd0b",
+      "source": "dev-workflow/scripts/browser-capture-probe.py"
+    },
     ".claude/skills/dev-workflow/scripts/ci-jobs.py": {
       "kind": "file",
       "mode": 493,
@@ -217,7 +239,7 @@
     ".claude/skills/dev-workflow/scripts/lane-audit.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "c6b95ef27ab58eb9fd32485a817232b52ae79cbef6fc7c04f6a5fb2b8414f91a",
+      "sha256": "3d642b0e70152c62427814eab27bf1114d4ee0bb68dcefc53c3ebe1f5d3971ea",
       "source": "dev-workflow/scripts/lane-audit.sh"
     },
     ".claude/skills/dev-workflow/scripts/lessons-lint.sh": {
@@ -259,19 +281,19 @@
     ".claude/skills/dev-workflow/scripts/postmerge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "dc47f3a2e991c2a6e323f75e3896cd721db9765a6f2f8f3cd476bafdda3f5a69",
+      "sha256": "50c47839175b6e026cce8fc1fb5f070e9c9cb14d375770f8d641dbbf94e4fa18",
       "source": "dev-workflow/scripts/postmerge.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-gates.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "753a9f8273434892309b46283460c3e5a71c73b669c80a0b06dfd07833a14035",
+      "sha256": "a0f13386516e26d7720689af515bdfde323d32166b71dbfb13def4a5fc68a339",
       "source": "dev-workflow/scripts/pr-gates.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-threads.py": {
       "kind": "file",
       "mode": 493,
-      "sha256": "a70c81fa7ff174282a56ec4cb997780d699682e0d6f5ec3059616d480358f8a8",
+      "sha256": "8fa9a187aa02920dafcbe4a9980df1ec19db2746cbf25713fc00a6fc831ea902",
       "source": "dev-workflow/scripts/pr-threads.py"
     },
     ".claude/skills/dev-workflow/scripts/preflight.sh": {
@@ -385,7 +407,7 @@
     ".claude/skills/skill-maintenance/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "4b730f36d8e0aa737c0a00a8be9a37ee918f6682acedc61e1b080adec493fa33",
+      "sha256": "c4e58a77da698fdd6735b22866f2b1b2d65dd791061376e2e206c7be8c806ab1",
       "source": "skill-maintenance/SKILL.md"
     },
     "AGENTS.md": {

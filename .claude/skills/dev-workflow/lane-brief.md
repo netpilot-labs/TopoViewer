@@ -2,6 +2,8 @@
 
 Copy it whole, fill every `<…>`, delete nothing: a lane knows only what its brief says (`lanes.md` has the why behind each
 section; the deletion rule below is quoted verbatim because a subagent does not inherit caution it was not given).
+Before sending, resolve the actual workspace and loaded `dev-workflow` skill directory; fill their absolute paths below. Do not infer either from a machine-specific home directory or a repository owner.
+
 Lin, 2026-10-04 — distilled from the brief board 31's 14 lanes ran on (2026-10-01/02).
 
 ```
@@ -10,11 +12,20 @@ You are one of <n> lanes running IN PARALLEL on <board / task>. A coordinator se
 final message. Stay inside <issue>; anything that belongs elsewhere: one comment on the owning issue + a line in your report.
 
 ## Where things are
-- Workspace root: /Users/linzhu/git_projects/NetPilot-Claude (NOT a git repo; each subfolder is one). Your repos:
-  <repo (owner/repo)> …; all on main, clean, fast-forwarded <date>.
-- Root skills: /Users/linzhu/git_projects/NetPilot-Claude/.claude/skills/ — load with the Skill tool. `dev-workflow` is
-  mandatory: its flow, its scripts by ABSOLUTE path (worktree under NetPilot-Claude/worktrees/<repo>/<branch>, draft PR,
+- Workspace root (`WORKSPACE`): <absolute configured workspace path>. Layout: <multi-repo root | component checkout>. Your repos:
+  <absolute checkout path (owner/repo)> …; all on <verified remote default branch>, clean, fast-forwarded <date>.
+- Loaded skill directory (`DEV_WORKFLOW_DIR`): <absolute directory containing the loaded dev-workflow SKILL.md>.
+  Resolve each helper as "$DEV_WORKFLOW_DIR/scripts/<helper>" and phase file relative to this directory; sibling skill
+  resources are "$DEV_WORKFLOW_DIR/../<skill>/<resource>". `dev-workflow` is mandatory: its flow, its scripts by
+  ABSOLUTE path (worktree under <absolute coordinator-validated worktree root>/<repo>/<branch>, draft PR,
   `@codex review` loop, ready flip, merge.sh, postmerge.sh, cleanup, learning pass). Read each phase file at its phase.
+- Before any repository/API operation, export these filled values and validate both directories locally:
+  ~~~sh
+  export WORKSPACE='<absolute configured workspace path>'
+  export DEV_WORKFLOW_DIR='<absolute loaded dev-workflow directory>'
+  test -d "$WORKSPACE" && test -f "$DEV_WORKFLOW_DIR/SKILL.md" && test -f "$DEV_WORKFLOW_DIR/scripts/preflight.sh" || { echo 'invalid lane workspace or skill directory' >&2; exit 2; }
+  ~~~
+  A failed validation stops the lane; report the missing path instead of guessing an owner/repo or using another workspace.
 - Scratch dir (SHARED by every lane — prefix every file with your issue id, e.g. `be947-pr-body.md`, and read line 1 back
   before `gh pr edit --body-file`): <scratchpad path>
 
@@ -37,7 +48,7 @@ final message. Stay inside <issue>; anything that belongs elsewhere: one comment
 
 ## Shared resources — each with its wrapper
 - Local Postgres `netpilot-db`, ONE consumer at a time: wrap every backend `pytest` and probe-lab run in
-  <skill-dir>/scripts/with-db-lock.sh <your-issue-id> <command…> (waits, runs, releases).
+  "$DEV_WORKFLOW_DIR/scripts/with-db-lock.sh" <your-issue-id> <command…> (waits, runs, releases).
 - Bench VM <name | none> (<project, zone, size, package>): reach it with `gcloud compute ssh <name> --zone <z> --project
   netpilot-ai --tunnel-through-iap --command '…'`; your lab prefix `<prefix>-`, your mgmt network `<name>` / `<subnet>`;
   destroy ONLY labs you deployed; never stop, reconfigure or re-package the VM; destroy your labs when done.
@@ -62,5 +73,5 @@ PR link · merge SHA (or "READY, not merged: <why>") · deploy/postmerge verdict
 quotes) · anything in the issue you did NOT do and why · lesson candidates · any leftover (worktree, lab, run dir).
 ```
 
-After the lanes report: `<skill-dir>/scripts/lane-audit.sh <owner/repo> <issue>… [pr:<n>…]` (absolute path, as every script here) checks each one's issue, PR (an issue-less lane
+After the lanes report: `"$DEV_WORKFLOW_DIR/scripts/lane-audit.sh" <owner/repo> <issue>… [pr:<n>…]` (absolute path, as every script here) checks each one's issue, PR (an issue-less lane
 by `pr:<n>`), worktree, remote branch and slot in one read; then `loose-ends.sh` ONCE for the whole wave (SKILL.md step 11).

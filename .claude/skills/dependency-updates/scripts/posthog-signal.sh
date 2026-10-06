@@ -6,9 +6,10 @@
 # Prints one line. Exit 0 = events seen · 1 = none in the window (REVIEW) · 2 = not configured.
 set -uo pipefail
 main() {
-  local window=15m since="" capture_url="" predicate description
+  local window=15m since="" capture_url="" predicate description check_config=0
   while [ $# -gt 0 ]; do
     case "$1" in
+      --check-config) check_config=1; shift;;
       --window) [ $# -ge 2 ] || return 2; window=$2; shift 2;;
       --since) [ $# -ge 2 ] || return 2; since=$2; shift 2;;
       --capture-url) [ $# -ge 2 ] || return 2; capture_url=$2; shift 2;;
@@ -37,6 +38,7 @@ main() {
   local host=${POSTHOG_HOST:-https://us.posthog.com}
   local pid=${POSTHOG_PROJECT_ID:-}
   [ -n "$pid" ] || { echo "posthog: POSTHOG_PROJECT_ID missing in netpilot-devops/.env"; return 2; }
+  [ "$check_config" = 1 ] && { echo "posthog: configured"; return 0; }
   # HogQL through the Query API — the only endpoint a `query:read` personal key is scoped for
   local payload; payload=$(python3 -c 'import json,sys; print(json.dumps({"query":{"kind":"HogQLQuery","query":"select count() from events where " + sys.argv[1]}}))' "$predicate") || return 2
   local n; n=$(curl -fsS -m 30 -H "Authorization: Bearer $POSTHOG_PERSONAL_API_KEY" -H "Content-Type: application/json" \

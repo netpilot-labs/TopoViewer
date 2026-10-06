@@ -14,7 +14,10 @@ R=${1:?repo}; cmd=${2:?show|tick}; marker=${3:-}; OWNER=$(owner_of "$R")
 # Server-side `--author app/renovate` returns [] for GitHub *App* bots → "no open dashboard"
 # false-negative on every repo whose dashboard IS open (pass-638 fixed this in inventory.sh but
 # not here; re-bit pass-688 2026-09-14, blocking a rebase tick). Match title + author in jq instead.
-issue=$(gh issue list --repo "$OWNER/$R" --state open --limit 200 --json number,title,author --jq '[.[]|select(.title=="Dependency Dashboard" and .author.login=="app/renovate")][0].number // empty' 2>/dev/null)
+issues_json=$(gh issue list --repo "$OWNER/$R" --state open --limit 200 --json number,title,author 2>&1) || { echo "dashboard discovery unavailable: $issues_json" >&2; exit 2; }
+issue_count=$(printf '%s\n' "$issues_json" | jq -er 'if type=="array" then length else error("invalid issue response") end') || { echo 'dashboard discovery unavailable: unreadable issue response' >&2; exit 2; }
+[ "$issue_count" -ge 200 ] && { echo 'dashboard discovery INCOMPLETE: issue limit 200 reached; older dashboard may be omitted' >&2; exit 2; }
+issue=$(printf '%s\n' "$issues_json" | jq -r '[.[]|select(.title=="Dependency Dashboard" and .author.login=="app/renovate")][0].number // empty') || { echo 'dashboard discovery unavailable: invalid issue fields' >&2; exit 2; }
 [ -z "$issue" ] && { echo "no open Dependency Dashboard in $R (reopen it — gotchas §1)" >&2; exit 2; }
 tmp=$(mktemp); trap 'rm -f "$tmp"' EXIT
 gh issue view "$issue" --repo "$OWNER/$R" --json body --jq .body > "$tmp"

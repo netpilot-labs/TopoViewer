@@ -17,12 +17,12 @@ pass follows the same rule). The script's `RESULT` line names which signal fired
   test is read first (`gh run view <id> -R <o>/<r> --log-failed`); in a suite the merged diff cannot reach, with the PR's run
   green on the same tree, re-run it (`gh run rerun <id> -R <o>/<r> --failed`) and re-run `postmerge.sh` (BE PR#942: a 1.0 s
   wall-clock bound read 1.026 s on a Markdown-only merge).
-**Repos without a deploy on merge** (containerlab-mcp, netpilot-skills, netpilot-probe-lab): `postmerge.sh` prints ONE
-`RESULT: no deploy on merge` line with the `main` push runs for the sha (read once — follow any not yet green) and exits 0;
-it records no hold, and frees one already kept for that sha only when those runs are all green (or the repo has no
-workflows). Then the repo's own step: containerlab-mcp — none
-(its release is tag-gated; merge.md); netpilot-skills — `sync-all.sh` + a commit in each consumer it changed
-(skill-maintenance ship duty), and confirm both consumers read current.
+**Repos without a deploy on merge:** `postmerge.sh` waits up to 25 minutes for the exact merge SHA's
+required push workflows and named jobs on the actual default branch (containerlab-mcp, TopoViewer,
+netpilot-probe-lab). Missing/pending runs at timeout, failures and unreadable evidence return nonzero;
+an existing hold clears only on proof. A repository with no workflows reports that explicitly and exits 0.
+Then complete the repo's own step: containerlab-mcp releases are tag-gated; netpilot-skills runs
+`sync-all.sh`, commits changed consumers through their own gates, and confirms both hosts read current.
 
 ## Rules for any watcher you write by hand
 - **Self-test the status source first and fail LOUDLY** (`exit 2 WATCHER-BROKEN`); N consecutive empty/error reads mid-loop =
@@ -73,11 +73,12 @@ workflows). Then the repo's own step: containerlab-mcp — none
   (FE PR#376; setup.md).
 - **"An unexpected error occurred when running this build" AFTER `Build Completed`** = platform: `npx vercel redeploy <dpl_id>`
   (no `--yes`); a CLI redeploy creates no GitHub deployment record — confirm with `npx vercel ls --prod` (FE PR#550).
-- **Frontend capture proof** (netpilot-skills PR#78): after the verified live version, `postmerge.sh` prints a unique
-  deployment-probe URL. Open it in a fresh browser tab with normal analytics enabled; verify the current version and
-  loaded client assets, and retain that receipt with the URL. The helper reads its real `$pageview`
-  [Current URL](https://posthog.com/docs/product-analytics/paths). Never fake capture through the API. No matching event
-  = REVIEW; attribute browser blocking, delayed ingestion, or broken capture before acknowledging the hold.
+- **Frontend capture proof** (netpilot-skills PR#78): after the verified live version, `postmerge.sh`
+  runs `browser-capture-probe.py` using Chrome/Chromium and Node 22+ in a temporary empty-cache profile.
+  It loads a unique nonce URL, verifies the browser's version stamp and loaded application scripts,
+  and lets production JavaScript capture its pageview. The independent PostHog query must then find
+  that exact URL after the verified version. Missing browser/runtime, load failure, or unreadable evidence
+  = BROKEN; no event after the wait = REVIEW. Never fake API capture; cleanup is limited to its own group/profile.
 - **Frontend `postmerge.sh` exit 2 whose ONLY `BROKEN` line is the posthog one, preceded by `posthog: not configured
   (POSTHOG_PERSONAL_API_KEY missing …)`** = a machine without the key (the WSL workstation): not a revert signal — confirm the
   deployment `success` and `/version.json` = the merge sha by hand and record both (FE PR#586, 2026-09-30); the next
