@@ -88,7 +88,7 @@ Step notes:
   finding fixed / accepted as residual / deferred / routed (acceptable risk, never zero
   findings). `pr-gates.sh <pr> --repo o/n` answers both; READY means dispositioned, so read
   the verdict's substance. There is no branch protection — you are the gate.
-- **11** Read `origin`’s remote default branch, then `git checkout <default> && git pull --ff-only` in the main checkout; `git worktree remove --force <path>`; delete the branch
+- **11** Read `origin`’s remote default branch, then `git checkout <default> && git pull --ff-only` in the main checkout; inspect tracked changes, all untracked files and ignored files in the worktree; preserve needed assets and unrelated work, then use unforced `git worktree remove <path>` only when removal is safe; delete the branch
   locally and remotely, plus `refs/heads/screenshots/<issue>` on a screenshots PR. Prune other merged branches by SHA only
   (tip == a merged PR's `headRefOid`, or `ahead_by == 0`), never the remote default branch, an open-PR branch or a checked-out one. Board-owned
   work updates the readme rows and the project folder's INFLIGHT (agent repos) NOW, not at stage end.

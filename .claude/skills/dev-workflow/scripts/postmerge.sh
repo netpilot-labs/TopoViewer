@@ -216,14 +216,14 @@ case "$R" in
   NetPilot-2-Frontend)
     vercel_wait https://app.netpilot.io/sign-in https://app.netpilot.io/version.json; sentry_new netpilot-frontend
     # capture signal (mechanics §8): REVIEW on 0 events, "not configured" without a personal key — never red by itself
-    # posthog-signal.sh stays with dependency-updates (its owner); a consumer that does not vendor
-    # that skill (netpilot-dev) gets a note instead of a dead path (board 30 Phase 2, 2026-09-28).
+    # The helper stays owned by dependency-updates; portable development profiles export it
+    # even when that operational skill is not enabled. Missing installation is not signal proof.
     phs="$(dirname "$0")/../../dependency-updates/scripts/posthog-signal.sh"
     if [ -x "$phs" ]; then
       pout=$("$phs" --window 15m); prc=$?; say "$pout"
       # the helper's status is the gate's (Codex, netpilot-skills PR#45): 2 = unavailable/failed → BROKEN; 1 = 0 events → REVIEW (exit 3)
       case $prc in 0) ;; 2) say "BROKEN: posthog signal unavailable — no capture signal read"; broken=1;; 1) review=1;; *) say "BROKEN: posthog signal helper exited $prc — no capture signal read"; broken=1;; esac
-    else say "posthog signal: dependency-updates/scripts/posthog-signal.sh not vendored here — skipped (a consumer without that skill runs no dependency gate)"; fi;;
+    else say "BROKEN: required posthog signal helper missing or not executable — no capture signal read"; broken=1; fi;;
   netpilot-marketing)
     vercel_wait https://www.netpilot.io/;;
 esac

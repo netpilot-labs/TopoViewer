@@ -28,16 +28,70 @@
       "kind": "link",
       "target": "../../.claude/skills/skill-maintenance"
     },
+    ".claude/skills/add-vendor/references/convergence.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "24cb78205d302493e3664bed66cfa15136bce35767427c44f84e43aa24d901f0",
+      "source": "add-vendor/references/convergence.md"
+    },
+    ".claude/skills/add-vendor/references/device-guide-template.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "caeee161ef5846f1c7343dc4154571fc1dfccca1a82906f1c5f0e6cc9e6e61d9",
+      "source": "add-vendor/references/device-guide-template.md"
+    },
+    ".claude/skills/add-vendor/references/friction-report.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "09f1c31b6a478e41848f128b1a63847f0b9240f98eb6777f326e46f4391ab240",
+      "source": "add-vendor/references/friction-report.md"
+    },
+    ".claude/skills/add-vendor/references/probe-loop.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "b3a201eb20938f248232f808972a0ae4cc6eabc8241195952494a24b52c658e8",
+      "source": "add-vendor/references/probe-loop.md"
+    },
+    ".claude/skills/add-vendor/references/scenarios.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "364b63e48418139d99add522ea0ca7a985faac55061c64a42e9b8fc611f96b9c",
+      "source": "add-vendor/references/scenarios.md"
+    },
     ".claude/skills/agent-configuration.md": {
       "kind": "file",
       "mode": 420,
       "sha256": "784403441f2724f2ae4fb882cad38be6f06f84027b7fd63743c02ace4e653a51",
       "source": "agent-configuration.md"
     },
+    ".claude/skills/dependency-updates/gotchas.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "bb946b8bb84d9683080d164dd2b84fb73ca2c1a58e65991189c5661be7d2849e",
+      "source": "dependency-updates/gotchas.md"
+    },
+    ".claude/skills/dependency-updates/mechanics.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "f034c55e53775e637ac2bf3ac307e3da1370d6866e3a01f0b2f988db48b79f35",
+      "source": "dependency-updates/mechanics.md"
+    },
+    ".claude/skills/dependency-updates/scripts/posthog-signal.sh": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "9d8624163267ee066c786dea6ee0de61e3ae486c5a337c33f82b79a5bfecfa8e",
+      "source": "dependency-updates/scripts/posthog-signal.sh"
+    },
+    ".claude/skills/dependency-updates/tiers.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "0707bf2b95772f2590ac1ab55dc3c608a5e56dd7b55b83c997df8b657b29ae9e",
+      "source": "dependency-updates/tiers.md"
+    },
     ".claude/skills/dev-workflow/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "4edb85b34d7efaf8898f3ab8badd0169ce63b77a1d04dde91ee5f5a2d1cc2528",
+      "sha256": "c1132c82f483ea45c020b2a503774aaa14aede467ceb40b09d4fde290a07d3ba",
       "source": "dev-workflow/SKILL.md"
     },
     ".claude/skills/dev-workflow/authority.md": {
@@ -61,7 +115,7 @@
     ".claude/skills/dev-workflow/lane-brief.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "678063bb7d7b014e7cee146c30f88e05306be99f7ff796fe13b09cc6446fe5aa",
+      "sha256": "073d3a9434621e5deec94aa30b5ff341cd1a6a479fb99ae3a1dc30e730469963",
       "source": "dev-workflow/lane-brief.md"
     },
     ".claude/skills/dev-workflow/lanes.md": {
@@ -73,7 +127,7 @@
     ".claude/skills/dev-workflow/merge.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "27e7199e85239642f566368f7c38a8b1300a00f690ca6eb764aef879a05db8ef",
+      "sha256": "d68ca4addf2dfbdc7048bb890f93862d79c3afe89d92f066ad598e86ff935241",
       "source": "dev-workflow/merge.md"
     },
     ".claude/skills/dev-workflow/residuals.md": {
@@ -85,7 +139,7 @@
     ".claude/skills/dev-workflow/review.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "5931b8914bf3238568a4284105b3c0ef8aa19325ad4de3bf9a64aa4c07d7e952",
+      "sha256": "2e8f6d4c94273f19247164500e745fd8aaad36146ca9afb16a40f039394688d1",
       "source": "dev-workflow/review.md"
     },
     ".claude/skills/dev-workflow/screenshots.md": {
@@ -103,7 +157,7 @@
     ".claude/skills/dev-workflow/scripts/ci-wait.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "01ce73e51acea5552a7c541b1c06f0cf76e224168f941415847d04528988fafb",
+      "sha256": "09d3d45c6e977f2ce89aa6175248526fadd3d389104cae3c1c8fb8dc89d65640",
       "source": "dev-workflow/scripts/ci-wait.sh"
     },
     ".claude/skills/dev-workflow/scripts/lane-audit.sh": {
@@ -124,6 +178,12 @@
       "sha256": "cb8c2cd5df23b08aceac4a6f882124f7d18713307397c41ab59a4d813cdfc196",
       "source": "dev-workflow/scripts/loose-ends.sh"
     },
+    ".claude/skills/dev-workflow/scripts/merge-checkout-proof.py": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "45063fcd2785497b875000b088ec303d53228149f9b7017c871d88a6602740ac",
+      "source": "dev-workflow/scripts/merge-checkout-proof.py"
+    },
     ".claude/skills/dev-workflow/scripts/merge-slot-selftest.sh": {
       "kind": "file",
       "mode": 493,
@@ -139,19 +199,19 @@
     ".claude/skills/dev-workflow/scripts/merge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "0dce71e2c092270ad485bfa2b73c59e79a76f7d9955ba199aa23267b9637cbe0",
+      "sha256": "ae6b9acc203b53d1090217b00fdcb1b54559b3e294ea5906299ca0cd9aa25227",
       "source": "dev-workflow/scripts/merge.sh"
     },
     ".claude/skills/dev-workflow/scripts/postmerge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "79a953025a33e936b47430891e56c706e51320e9d546010a509acd14303cbd7e",
+      "sha256": "91506c396b7adfd205fc688513db7e383f85d252f9f41147cf05fc327aa1102a",
       "source": "dev-workflow/scripts/postmerge.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-gates.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "10d2c0881b5e296d155d2c3c1b058ce6400aea12a67c975a9aa7656db0335966",
+      "sha256": "e78eb05488692566be61ac9cb1bc7998df16583b60b4802e636760e8b7a6b020",
       "source": "dev-workflow/scripts/pr-gates.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-threads.py": {
@@ -175,8 +235,14 @@
     ".claude/skills/dev-workflow/scripts/required-workflows.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "3cccd2c0161f9b2c4ed7759240d5c889682fd07f69e8678b768d79aeec1c3553",
+      "sha256": "73dc8bdec6c945f015658d820b2c812b4b178ab24986df91c8c655cdd5e995d0",
       "source": "dev-workflow/scripts/required-workflows.sh"
+    },
+    ".claude/skills/dev-workflow/scripts/unseen-pr-workflows.py": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "ee4eb7c21b22316c66577dd16d5d7e673b2a6e56ecda492d99f6ad46f74ed6e2",
+      "source": "dev-workflow/scripts/unseen-pr-workflows.py"
     },
     ".claude/skills/dev-workflow/scripts/with-db-lock.sh": {
       "kind": "file",
@@ -205,8 +271,14 @@
     ".claude/skills/feature-research/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "be7b0af29b5732f4054e062b6e2a00aa16d175a3ed76c9c73080e35eee80f85b",
+      "sha256": "1f57fa37996c631cf5672cb7a70d601a090a18649e157646b33e6c22835a9ca1",
       "source": "feature-research/SKILL.md"
+    },
+    ".claude/skills/golden-image/impact.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "be7c20208e477336d3d047dd531e77303838e480049d7fd6d7fafde65a6dcc7e",
+      "source": "golden-image/impact.md"
     },
     ".claude/skills/issue-labeling/SKILL.md": {
       "kind": "file",
@@ -229,13 +301,19 @@
     ".claude/skills/project-management/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "070021a7f06dd8cccc66440cd3352b6ef10cfe4407079b4a724247e0327754c3",
+      "sha256": "f63e9c52a120f1561094c868bb2f13070088b1824ebcc4144f360cac9dc0bcee",
       "source": "project-management/SKILL.md"
+    },
+    ".claude/skills/project-management/closing.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "6bd9265619a7bbf5c9f7f725a87359f6e692180514d9e08e7950e4dfd6e4b2dc",
+      "source": "project-management/closing.md"
     },
     ".claude/skills/prompt-engineering/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "6bef476457c3e7772b3e1c90c3b7b2c68e2f4cfca76092f2d2caa564c7f27a4b",
+      "sha256": "5428eaa2470ce6fd39fa31bd6574df02f1a6058e19627b7e350a9ce39767b3b2",
       "source": "prompt-engineering/SKILL.md"
     },
     ".claude/skills/prompt-engineering/acceptance.md": {

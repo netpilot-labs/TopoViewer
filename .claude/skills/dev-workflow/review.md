@@ -92,7 +92,7 @@ against unreal actors come out. Then:
 - **A SECOND finding on one heuristic is the signal to change the method, at round 2** — swap the heuristic for a quantity
   the code measures exactly, or a precondition check that falls back to the weaker true statement; one more caveat earns
   the next finding (BE PR#958: 7 of 10 findings on one sentence; clab PR#266).
-**Fork ownership** (Lin, 2026-09-19; default mode — under full delegation the agent decides inside its scope, SKILL.md
+**Fork ownership** (Lin, 2026-09-19; default mode — under full delegation the agent decides inside its scope, authority.md
 Delegation modes; a cross-phase scope move stays his in both modes, `project-management` Scope discipline): the TICKET's owner decides. A loop-owned item decides itself when the surface is off the
 never-auto list, the redesign diff sits inside the loop's intake gate (risk ≤ 25 / confidence ≥ 85), and no user-visible policy is added. Lin decides never-auto surfaces, p1/p2 user-visible policy, lane changes;
 p3-cosmetic forks go to the desk as a stated default with a 24 h opt-out.

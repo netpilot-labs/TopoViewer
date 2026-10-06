@@ -249,7 +249,7 @@ report() {
   # The run summary FLAPS (deploy.md); jobs stayed truthful. And absent
   # CI is not green — a head with no run at all fails this gate.
   local runs a b sel
-  sel='select(.name!="Vercel")'
+  sel="select(.name!=\"Vercel\")|select(any(.pull_requests[]?; .number == $PR))"
   [ -n "$SINCE" ] && sel="$sel|select(.created_at >= \"$SINCE\")"  # runs from BEFORE the triggering action do not count; >= keeps a run minted in the same second as `t` (PR #23 R2)
   read_runs() {
     local data rows path run_id status conclusion proof rc
@@ -359,7 +359,8 @@ escalate_if_no_ack() {
           --jq "[.[]|select((.user.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\")|not)|select((.author_association // \"\")|IN(\"OWNER\",\"MEMBER\",\"COLLABORATOR\"))|select(.body|test(\"@codex review\";\"i\"))]|last|.id // empty" 2>/dev/null | tail -1)"
   [ -n "$acks" ] || return 0
   local eyes
-  eyes="$(gh api "repos/$REPO/issues/comments/$acks/reactions" --paginate --slurp 2>/dev/null | jq -r '[.[].[]|select(.content=="eyes")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))]|length' 2>/dev/null)"
+  eyes="$(gh api "repos/$REPO/issues/comments/$acks/reactions" --paginate --slurp 2>/dev/null | jq -r '[.[].[]|select(.content=="eyes")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))]|length' 2>/dev/null)" || { echo "BROKEN: cannot read request reactions — trust nothing"; exit 2; }
+  [[ "${eyes}" =~ ^[0-9]+$ ]] || { echo "BROKEN: unreadable request reactions — trust nothing"; exit 2; }
   if [ "${eyes:-0}" = "0" ]; then
     echo "  no 👀 on the request after 5min — RE-REQUESTING (review.md, The loop)"
     if env -u GH_TOKEN -u GITHUB_TOKEN gh pr comment "$PR" -R "$REPO" --body "@codex review" >/dev/null 2>&1 \
@@ -473,7 +474,8 @@ while :; do
   if [ "$IS_DRAFT" != "true" ] && [ "$VERDICT_ON_HEAD" = 1 ] && [ "$POSTREQ" != 1 ]; then
     # only the PICKED-UP-but-unanswered shape (👀 on the latest request); no 👀 is escalate_if_no_ack's case
     PF_REQID="$(gh api "repos/$REPO/issues/$PR/comments" --paginate --jq '[.[]|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]")|not)|select((.author_association // "")|IN("OWNER","MEMBER","COLLABORATOR"))|select(.body|test("@codex review";"i"))]|last|.id // empty' 2>/dev/null | tail -1)"
-    PF_EYES=0; [ -n "$PF_REQID" ] && PF_EYES="$(gh api "repos/$REPO/issues/comments/$PF_REQID/reactions" --paginate --slurp 2>/dev/null | jq -r '[.[].[]|select(.content=="eyes")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))]|length' 2>/dev/null)"
+    PF_EYES=0; [ -n "$PF_REQID" ] && PF_EYES="$(gh api "repos/$REPO/issues/comments/$PF_REQID/reactions" --paginate --slurp 2>/dev/null | jq -r '[.[].[]|select(.content=="eyes")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))]|length' 2>/dev/null)" || { echo "BROKEN: cannot read request reactions — trust nothing"; exit 2; }
+  [[ "${PF_EYES}" =~ ^[0-9]+$ ]] || { echo "BROKEN: unreadable request reactions — trust nothing"; exit 2; }
     PF_SINCE=$(( $(date +%s) - $(python3 -c "import sys,datetime;print(int(datetime.datetime.fromisoformat(sys.argv[1].replace('Z','+00:00')).timestamp()))" "$REQTS" 2>/dev/null || echo 0) ))
     if [ "${PF_EYES:-0}" -gt 0 ] && [ "$PF_REREQ" = 0 ] && [ "$PF_SINCE" -ge 900 ]; then
       echo "  post-flip request unanswered for 15 min on an already-verdicted head — ONE automatic re-request (#22)"

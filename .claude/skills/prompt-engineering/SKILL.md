@@ -128,7 +128,7 @@ agent-facing).
     BE#430's subagent delete gate). Sweep all four layers before calling it done.
     **A NEW tool is also a permission change — the backend allowlist is a fifth surface in a
     different repo:** every new `mcp__containerlab__*`/`mcp__netpilot__*` tool must be added to
-    `MCP_TOOLS`/`SHARED_TOOLS` in backend `claude_client.py` in the same wave, or the
+    `MCP_TOOLS`/`SHARED_TOOLS` in backend `app/agents/client/tool_surface.py` (`claude_client.py` re-exports them) in the same wave, or the
     `can_use_tool` safety net denies it in production ("not currently permitted") while the
     server still advertises it. Direct-MCP bench validation bypasses that permission chain, so
     only a production-path agent turn can catch the miss (`execute_dialog` shipped with guides

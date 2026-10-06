@@ -10,7 +10,8 @@
 #   1b Merge slot (real run): `merge-slot.sh acquire` — one merge per repo at a time on this machine, held
 #     through the deploy watch (merge-slot.sh carries the why and the rules). A dry run only reports it.
 #   2 Base check: compare main...head → behind_by == 0, else the carve-out: EVERY required
-#     workflow's (all but Vercel) latest run is green and was created AFTER main's tip commit
+#     workflow's (all but Vercel) latest run is green, its checkout merge parents prove the current
+#     default tip and PR head, and it was created AFTER main's tip commit
 #     (both UTC, from the API — a local-offset string compare merged a stale base, BE PR#842);
 #     within CARVEOUT_MARGIN_S = stale; and the gate in step 4 then runs with --since <main tip>.
 #     Stale → exit 1 "rebase and re-verify".
@@ -76,7 +77,7 @@ else
   # Every REQUIRED workflow (all but Vercel) must have its LATEST run green and newer than main's
   # tip — one fresh run of one workflow never vouches for the others (PR #23 R3).
   runs_json=$(gh api "repos/$REPO/actions/runs?head_sha=$HEAD&event=pull_request&per_page=50" \
-              --paginate --slurp 2>/dev/null | jq -c '[.[].workflow_runs[]|select(.name!="Vercel")]|group_by(.workflow_id // (.path|split("@")[0]))|map(sort_by(.created_at,.id)|last)' 2>/dev/null)
+              --paginate --slurp 2>/dev/null | jq -c --argjson pr "$PR" '[.[].workflow_runs[]|select(.name!="Vercel")|select(any(.pull_requests[]?; .number == $pr))]|group_by(.workflow_id // (.path|split("@")[0]))|map(sort_by(.created_at,.id)|last)' 2>/dev/null)
   [ -n "$runs_json" ] || final "BROKEN cannot list runs on the head" 2
   total=$(printf '%s' "$runs_json" | python3 -c 'import json,sys; r=json.load(sys.stdin); print(len(r))')
   okc=$(printf '%s' "$runs_json" | python3 -c 'import json,sys; r=json.load(sys.stdin); print(sum(1 for x in r if x.get("status")=="completed" and x.get("conclusion")=="success"))')
@@ -93,7 +94,12 @@ else
   # an empty conversion is 0 to bash arithmetic and would PASS the carve-out (PR #23 R3): validate both
   [[ "$run_s" =~ ^[0-9]+$ ]] && [[ "$main_s" =~ ^[0-9]+$ ]] || final "BROKEN cannot parse run date '$RUN_DATE' or $BASE tip date '$MAIN_DATE' — trust nothing" 2
   if [ $(( run_s - main_s )) -gt $CARVEOUT_MARGIN_S ]; then
-    echo "merge.sh: base check — $BEHIND behind, CARVE-OUT applies: oldest of the $total required workflows' latest green runs ($RUN_DATE) is newer than $BASE tip $MAIN_DATE (UTC compare)"
+    # Embedded committer time is not ref-update time (an old commit can be fast-forwarded today).
+    # Require immutable checkout ancestry for every successful job; expired/unsupported logs
+    # conservatively require rebase, while the proven Lin carve-out remains available.
+    printf '%s' "$runs_json" > "$TMPD/checkout-runs.json"
+    python3 "$SK/merge-checkout-proof.py" "$REPO" "$PR" "$HEAD" "$MAIN_TIP" "$TMPD/checkout-runs.json" || final "NOT MERGED base is $BEHIND behind and CI checkout ancestry is unproven — rebase and re-verify" 1
+    echo "merge.sh: base check — $BEHIND behind, CARVE-OUT applies: oldest of the $total required workflows' latest green runs ($RUN_DATE) has proven current-base checkout ancestry and is newer than $BASE tip $MAIN_DATE (UTC compare)"
     GATE_SINCE="$MAIN_DATE"   # the gate below must also see only runs newer than main's tip
   else
     final "NOT MERGED base is $BEHIND behind and a required workflow's latest green run ($RUN_DATE) is not newer than $BASE tip ($MAIN_DATE) — rebase and re-verify CI + Codex" 1

@@ -19,7 +19,7 @@ final message. Stay inside <issue>; anything that belongs elsewhere: one comment
   before `gh pr edit --body-file`): <scratchpad path>
 
 ## Authority and endpoint
-- Delegation mode (dev-workflow SKILL.md "Delegation modes"): <default | full — "Delegation: full, Lin <date>, scope: <task/project>">.
+- Delegation mode (dev-workflow authority.md "Delegation modes"): <default | full — "Delegation: full, Lin <date>, scope: <task/project>">.
   Under full: the endpoint is merge-and-finish — gates green (CI on the current head + Codex dispositioned) → merge.sh →
   postmerge.sh → cleanup → learning-pass comment; the PR body carries the delegation line. Under default: agent/auto merges;
   agent/hold, and any diff on the never-auto list, stops at PR-ready (the two guardrail carve-outs in SKILL.md still apply;
