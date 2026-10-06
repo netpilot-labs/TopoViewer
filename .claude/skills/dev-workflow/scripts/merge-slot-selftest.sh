@@ -38,19 +38,27 @@ tok=$(MERGE_SLOT_ACK=7 "$S" acquire "$R" 8 2>/dev/null)
 mkdir "$D/ack"; "$S" settle "$R" "$SHA" clean >/dev/null; t "a clean re-run during an ACK handoff does NOT free it" state "7 BROKEN"
 rmdir "$D/ack"; "$S" settle "$R" "$SHA" clean >/dev/null;   t "a clean re-run for that sha frees it" free
 hold_broken REVIEW >/dev/null; "$S" settle "$R" "$SHA" clean >/dev/null; t "a clean re-run never clears REVIEW lines" state "7 REVIEW"
+"$S" settle "$R" "$SHA" clean-skip >/dev/null; t "skipped Sentry preserves pending REVIEW attribution" state "7 SENTRY-SKIPPED+REVIEW"
+"$S" settle "$R" "$SHA" BROKEN >/dev/null; t "a nonclean rerun preserves pending REVIEW attribution" state "7 BROKEN+REVIEW"
+"$S" settle "$R" "$SHA" clean >/dev/null; t "clean after nonclean rerun still cannot erase REVIEW" state "7 BROKEN+REVIEW"
 tok=$(MERGE_SLOT_ACK=7 "$S" acquire "$R" 8 2>/dev/null); "$S" release "$R" "$tok" merged 2>/dev/null
 
 C="$MERGE_CLAIM_DIR/netpilot-labs__containerlab-mcp"
 "$S" settle netpilot-labs/containerlab-mcp "$SHA" BROKEN >/dev/null; t "(setup) a stale hold on a no-deploy repo" state "7 BROKEN" "$C"
-STUB_WF=2 STUB_RUNS="Tests in_progress/-" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "postmerge.sh <no-deploy repo>: a RUNNING main run keeps the hold" state "7 BROKEN" "$C"
-STUB_WF=2 STUB_RUNS="Tests completed/failure, Lint completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a FAILED main run keeps it" state "7 BROKEN" "$C"
+STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests in_progress/-" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "postmerge.sh <no-deploy repo>: a RUNNING main run keeps the hold" state "7 BROKEN" "$C"
+STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests completed/failure, Lint completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a FAILED main run keeps it" state "7 BROKEN" "$C"
 STUB_WF=2 STUB_RUNS="" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… no run yet keeps it" state "7 BROKEN" "$C"
-STUB_WF=2 STUB_RUNS="Tests completed/success" STUB_DATE=$(date -u +%FT%TZ) "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a green run on a merge seconds old keeps it (a second workflow's run may not exist yet)" state "7 BROKEN" "$C"
-STUB_WF=2 STUB_RUNS="Tests completed/success, Docs completed/skipped" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a skipped workflow does not verify main or clear its hold" state "7 BROKEN" "$C"
-out=$(STUB_WF=2 STUB_RUNS="Tests completed/success, Docs completed/success" "$PM" containerlab-mcp "$SHA" 2>&1); rc=$?
+STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests completed/success" STUB_DATE=$(date -u +%FT%TZ) "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a green run on a merge seconds old keeps it (a second workflow's run may not exist yet)" state "7 BROKEN" "$C"
+STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests completed/success, Docs completed/skipped" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a skipped workflow does not verify main or clear its hold" state "7 BROKEN" "$C"
+STUB_WF=2 STUB_RUNS=".github/workflows/cloud-release.yml Cloud completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "successful subset without the expected default-push workflow keeps the hold" state "7 BROKEN" "$C"
+STUB_WF=UNREADABLE STUB_RUNS=".github/workflows/test.yml Tests completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "unreadable workflow inventory cannot verify main" state "7 BROKEN" "$C"
+out=$(STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests completed/success, Docs completed/success" "$PM" containerlab-mcp "$SHA" 2>&1); rc=$?
 t "… exits 0"                                        [ $rc -eq 0 ]
 t "… says there is no deploy on merge"               grep -q 'no deploy on merge' <<< "$out"
 t "… green main runs clear the stale hold for that sha" free "$C"
+U="$MERGE_CLAIM_DIR/lz-networks__netpilot-devops"
+"$S" settle lz-networks/netpilot-devops "$SHA" BROKEN >/dev/null
+STUB_WF=1 STUB_RUNS=".github/workflows/custom.yml Custom completed/success" "$PM" netpilot-devops "$SHA" >/dev/null 2>&1; t "unknown positive workflow inventory cannot verify a complete push set" state "7 BROKEN" "$U"
 K="$MERGE_CLAIM_DIR/lz-networks__netpilot-skills"
 tok=$("$S" acquire lz-networks/netpilot-skills 9); "$PM" netpilot-skills "$SHA" >/dev/null 2>&1
 t "… and leaves another PR's in-flight slot alone"   state "9 inflight" "$K"

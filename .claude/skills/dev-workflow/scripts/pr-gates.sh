@@ -59,9 +59,9 @@ OWNER="${REPO%%/*}"; NAME="${REPO##*/}"
 say() { [ "$QUIET" = 1 ] || echo "$@"; }
 
 # ---------------------------------------------------------------------------
-# One query, extracted SERVER-SIDE. A raw response piped to local `jq` aborts on
-# control characters in a review body; the empty result then reads as a state
-# change and the caller "concludes" something. Never parse locally. (BE#308)
+# One raw query per phase/poll, validated before any local filters. Malformed
+# JSON, API errors and missing evidence fail BROKEN; an empty filter result
+# must never conceal a failed API read (BE#308).
 # Window sizes (BE#401, 2026-08-05): EVERY thread reply creates a review
 # object, so a long disposition loop inflates these collections fast (35
 # reviews by round 8). GraphQL last:N reads the NEWEST end — the REST
@@ -69,16 +69,29 @@ say() { [ "$QUIET" = 1 ] || echo "$@"; }
 # moment the count crossed a page, which is why hand-rolled REST watchers are
 # banned (review.md, "Reading the verdict"). Keep the windows ahead of loop growth.
 # ---------------------------------------------------------------------------
-gq() {
-  gh api graphql -f query="
+# One validated API snapshot per phase/poll; local filters never spend more quota.
+GQ_QUERY="
   {repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequest(number:$PR){
     headRefOid headRefName state isDraft
     reviews(last:50){totalCount nodes{commit{oid} submittedAt author{login} body
       comments(first:50){totalCount nodes{body}}}}
     comments(last:50){totalCount nodes{author{login} authorAssociation createdAt body}}
     reviewThreads(last:100){totalCount nodes{isResolved comments(first:1){nodes{author{login} originalCommit{oid} createdAt body path}}}}
-  }}}" --jq "$1" 2>/dev/null
+  }}}"
+refresh_snapshot() {
+  GQ_SNAPSHOT=$(gh api graphql -f query="$GQ_QUERY" 2>/dev/null) || { echo "BROKEN: cannot read PR review snapshot (auth, network or rate limit)"; return 2; }
+  printf '%s\n' "$GQ_SNAPSHOT" | jq -e '
+    ((.errors // []) | length)==0 and
+    (.data.repository.pullRequest | type)=="object" and
+    (.data.repository.pullRequest as $p |
+      ($p.headRefOid | type)=="string" and ($p.headRefOid | test("^[0-9a-fA-F]{40}$")) and
+      ($p.isDraft | type)=="boolean" and
+      ([$p.reviews,$p.comments,$p.reviewThreads] | all(.[];
+        type=="object" and (.nodes | type)=="array" and (.totalCount | type)=="number")))
+  ' >/dev/null 2>&1 || { echo "BROKEN: invalid PR review snapshot (API errors, missing data or invalid head/evidence)"; return 2; }
 }
+gq() { printf '%s\n' "$GQ_SNAPSHOT" | jq -r "$1"; }
+refresh_snapshot || exit 2
 
 # Self-test the status source FIRST and fail LOUDLY. A watcher whose calls all
 # error looks identical to a quiet one and loops forever. (deploy.md)
@@ -166,7 +179,7 @@ report() {
             |select(.body|test(\"(^|\\n)codex-comment-findings: ${head:0:7} dispositioned\"))|.createdAt]|last // \"\") as \$m
         | [\$c[]|select((.author.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\"))|$noerr|select(.body|contains(\"$head10\"))
             |{t: .createdAt, n: ([.body|scan(\"badge/P[0-9]\")]|length)}] as \$f
-        | \"\\([\$f[]|select(.t > \$m)|.n]|add // 0) \\([\$f[]|.n]|add // 0)\"")"
+        | \"\\([\$f[]|select(.t >= \$m)|.n]|add // 0) \\([\$f[]|.n]|add // 0)\"")"
   if [[ "$cf" =~ ^[0-9]+\ [0-9]+$ ]]; then CF_OPEN=${cf% *}; CF_FOUND=${cf#* }; else CF_OPEN=unreadable; CF_FOUND=unreadable; fi
   CODEX_FAILED="$(gq "[.data.repository.pullRequest.comments.nodes[]
         |select(.author.login|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\"))
@@ -205,7 +218,7 @@ report() {
           --jq "[.[]|select((.user.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\")|not)|select((.author_association // \"\")|IN(\"OWNER\",\"MEMBER\",\"COLLABORATOR\"))|select(.body|test(\"@codex review\";\"i\"))]|last|.id // empty" 2>/dev/null | tail -1)"
   thumbs=0
   if [ -n "$reqid" ]; then
-    thumbs="$(gh api "repos/$REPO/issues/comments/$reqid/reactions" --paginate --slurp 2>/dev/null | jq -r '[.[].[]|select(.content=="+1")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))]|length' 2>/dev/null)"
+    thumbs="$(gh api "repos/$REPO/issues/comments/$reqid/reactions" --paginate --slurp 2>/dev/null | jq -r --arg reqts "$reqts" '[.[].[]|select(.content=="+1")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))|select(.created_at > $reqts)]|length' 2>/dev/null)"
   fi
   # Codex's 👍 lands on the PR ISSUE, never on the request comment (verified
   # FE PR#524 + PR#528, 2026-09-14: zero codex reactions on four request
@@ -239,17 +252,32 @@ report() {
   sel='select(.name!="Vercel")'
   [ -n "$SINCE" ] && sel="$sel|select(.created_at >= \"$SINCE\")"  # runs from BEFORE the triggering action do not count; >= keeps a run minted in the same second as `t` (PR #23 R2)
   read_runs() {
-    gh api "repos/$REPO/actions/runs?head_sha=$head&event=pull_request&per_page=100" --paginate --slurp 2>/dev/null | jq -r "[.[].workflow_runs[]|$sel]|group_by(.workflow_id)|map(sort_by(.created_at)|last)|.[]|\"\\(.path|split(\"@\")[0])=\\(.status):\\(.conclusion)\"" 2>/dev/null | sort -u
+    local data rows path run_id status conclusion proof rc
+    data=$(gh api "repos/$REPO/actions/runs?head_sha=$head&event=pull_request&per_page=100" --paginate --slurp 2>/dev/null) || return 2
+    rows=$(printf '%s\n' "$data" | jq -r "[.[].workflow_runs[]|$sel]|group_by(.workflow_id)|map(sort_by(.created_at)|last)|.[]|[(.path|split(\"@\")[0]),(.id|tostring),.status,(.conclusion // \"\")]|@tsv" 2>/dev/null) || return 2
+    while IFS=$'\t' read -r path run_id status conclusion; do
+      [ -n "$path" ] || continue
+      if [ "$status" = completed ] && [ "$conclusion" = success ] && [ "$IS_DRAFT" != true ]; then
+        proof=$(python3 "$(dirname "$0")/ci-jobs.py" "$REPO" "$run_id" "$path" "$head"); rc=$?
+        case $rc in
+          0) ;;
+          1) conclusion=required-jobs-not-successful; echo "CI job proof: $path: $proof" >&2;;
+          *) echo "BROKEN: cannot verify $path jobs: $proof" >&2; return 2;;
+        esac
+      fi
+      printf '%s=%s:%s\n' "$path" "$status" "$conclusion"
+    done <<< "$rows"
   }
-  runs="$(read_runs)"
+
+  runs="$(read_runs)" || { echo "BROKEN: cannot read or verify current-head workflow jobs"; exit 2; }
   sleep 5
-  b="$(read_runs)"
+  b="$(read_runs)" || { echo "BROKEN: cannot read or verify current-head workflow jobs"; exit 2; }
   # An EMPTY listing flaps too: ci-wait's final gate read `<none>` seconds after enumerating
   # both runs green on the same head (clab PR#232, 2026-09-29). Exactly one empty read = a
   # transient — a third read after 10 s decides; both empty = truly absent (not green).
   # (grouped: bash's && and || share precedence — ungrouped, the first-empty case never retried; PR #37 R1)
   if { [ -z "$runs" ] && [ -n "$b" ]; } || { [ -n "$runs" ] && [ -z "$b" ]; }; then
-    sleep 10; runs="$(read_runs)"; b="$runs"
+    sleep 10; runs="$(read_runs)" || { echo "BROKEN: cannot read or verify current-head workflow jobs"; exit 2; }; b="$runs"
   fi
   a="$runs"
   say "  CI on head         : ${a:-<none>}"
@@ -340,7 +368,7 @@ escalate_if_no_ack() {
       # window could count as post-request activity on the next poll (#27 R5 P1) — same check as the post-flip path
       PF_REREQ=1; PF_T=$(date +%s)   # one retry total; an unanswered replacement holds after 15 min
       local old_ts="$REQTS" i
-      for i in 1 2 3 4 5 6; do REQTS="$(req_ts)"; [ -n "$REQTS" ] && [[ "$REQTS" > "$old_ts" ]] && break; sleep 10; done
+      for i in 1 2 3 4 5 6; do refresh_snapshot || exit 2; REQTS="$(req_ts)"; [ -n "$REQTS" ] && [[ "$REQTS" > "$old_ts" ]] && break; sleep 10; done
       if ! { [ -n "$REQTS" ] && [[ "$REQTS" > "$old_ts" ]]; }; then
         echo "BROKEN: the re-request was posted but is not visible after 60 s — trust nothing"; [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL BROKEN"; exit 2
       fi
@@ -385,6 +413,7 @@ fi
 START=$(date +%s); EMPTY=0; PF_REREQ=0; PF_T=0
 say "watching $REPO#$PR head=$HEAD (request at $REQTS)"
 while :; do
+  refresh_snapshot || exit 2
   CUR="$(gq '.data.repository.pullRequest.headRefOid')"
   # Distinguish "no value" from "a different value". An empty read is an API
   # error; treating it as a change is how a watcher exits 0 having seen nothing
@@ -403,7 +432,9 @@ while :; do
   if [ "$CUR" != "$HEAD" ]; then
     echo "HEAD MOVED $HEAD -> $CUR (someone pushed; restart the watch)"; exit 2
   fi
-  report "$HEAD" "$REQTS" >/dev/null 2>&1
+  poll_quiet=$QUIET; QUIET=1
+  report "$HEAD" "$REQTS"
+  QUIET=$poll_quiet
   # Non-draft: keep watching until the LATEST request is answered — exiting on
   # a stale on-head verdict is exactly the false-READY this lane exists to
   # prevent (2026-08-22).
@@ -451,7 +482,7 @@ while :; do
         # the new request must be OBSERVABLE before it bounds anything: an unchanged REQTS would let the old
         # draft-phase verdict satisfy the post-request test on the next poll (#27 R3 P1)
         PF_OLD="$REQTS"; PF_REREQ=1; PF_T=$(date +%s)
-        for i in 1 2 3 4 5 6; do REQTS="$(req_ts)"; [ -n "$REQTS" ] && [[ "$REQTS" > "$PF_OLD" ]] && break; sleep 10; done
+        for i in 1 2 3 4 5 6; do refresh_snapshot || exit 2; REQTS="$(req_ts)"; [ -n "$REQTS" ] && [[ "$REQTS" > "$PF_OLD" ]] && break; sleep 10; done
         if ! { [ -n "$REQTS" ] && [[ "$REQTS" > "$PF_OLD" ]]; }; then
           echo "BROKEN: the re-request was posted but is not visible after 60 s — trust nothing"; [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL BROKEN"; exit 2
         fi

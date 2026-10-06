@@ -111,6 +111,7 @@ case "$cmd" in
         was=$hline; mkdir "$slot/ack" 2>/dev/null || { echo "merge slot for $repo is changing hands this instant — $res NOT recorded; re-run postmerge.sh"; exit 0; }
         rd
         if [ "$hline" = "$was" ]; then
+          [[ "$hstate" == *REVIEW* ]] && [[ "$res" != *REVIEW* ]] && res="$res+REVIEW"
           echo "$hpr $sha $htok $res" > "$hf"
           echo "merge slot for $repo stays held ($res): the next merge in this repo takes MERGE_SLOT_ACK=$hpr once this result is dispositioned (deploy.md)"
         else echo "merge slot for $repo changed hands this instant — $res NOT recorded; left to PR#$hpr"; fi

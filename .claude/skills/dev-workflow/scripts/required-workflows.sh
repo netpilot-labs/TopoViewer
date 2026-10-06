@@ -23,7 +23,7 @@ IFS=$'\t' read -r created headref headrepo <<< "$meta"
 active="$(gh api "repos/$REPO/actions/workflows" --paginate --jq '.workflows[]|select(.state=="active")|"\(.id)\t\(.path)\t\(.name)"' 2>/dev/null)" || exit 2
 # >= keeps a run minted in the same second the PR opened; both stamps are GitHub's second-precision UTC.
 # The head-repository match keeps a fork PR that shares the branch name out of the set (Codex, PR#72).
-hist="$(gh api "repos/$REPO/actions/runs?branch=$headref&event=pull_request&per_page=100" --paginate \
+hist="$(gh api "repos/$REPO/actions/runs" -X GET -f "branch=$headref" -f event=pull_request -f per_page=100 --paginate \
         --jq "[.workflow_runs[]|select(.name!=\"Vercel\")|select(.created_at >= \"$created\")|select((.head_repository.full_name // \"\") == \"$headrepo\")|.workflow_id]|unique|.[]" 2>/dev/null)" || exit 2
 hist="$(printf '%s\n' "$hist" | sort -u)"   # --jq deduplicates each page; collapse duplicate workflow IDs across pages, regardless of historical display names.
 while IFS= read -r id; do

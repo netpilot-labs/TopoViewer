@@ -22,6 +22,8 @@ Draft pushes skip every CI job on the four main repos, so the loop runs CI-free.
    back with `gh pr ready --undo`. After ANY push, wait for
    that head's run to appear before `gh pr ready` — a flip seconds after a push gets its run cancelled by the concurrency group
    (BE PR#764).
+The canonical `scripts/ci-jobs.py` checks required job names for known PR workflows; unknown workflows require every job to succeed. Keep its table aligned when those CI job names change. Backend real-Clerk auth is main-only and checked by `postmerge.sh`, not its PR gate.
+
 CI green is defined once, in SKILL.md (the two gates). Read it at job level (`gh api "repos/o/r/actions/runs?head_sha=<full
 oid>"`): `gh pr checks` lags a push and lies on a DIRTY PR.
 **A repo with NO CI workflows** (`gh api repos/<o>/<r>/actions/workflows --jq .total_count` = 0; netpilot-skills today): the CI

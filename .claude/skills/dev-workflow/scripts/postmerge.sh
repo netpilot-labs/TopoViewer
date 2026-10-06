@@ -60,13 +60,21 @@ SLOT="$(cd "$(dirname "$0")" && pwd)/merge-slot.sh"
 case "$R" in
   NetPilot-2-Backend|NetPilot-2-LB|NetPilot-2-Frontend|netpilot-marketing) ;;
   containerlab-mcp|netpilot-skills|netpilot-probe-lab|netpilot-devops|netpilot-dev|netpilot-lead-desk|netpilot-support-desk|netpilot-marketing-monitor|3rd-party-apps|TopoViewer)
-    runs=$(gh api "repos/$OWNER/$R/actions/runs?head_sha=$sha&event=push" --jq '[.workflow_runs[]|"\(.name) \(.status)/\(.conclusion // "-")"]|join(", ")') || runs="UNREADABLE"
+    runs=$(gh api "repos/$OWNER/$R/actions/runs?head_sha=$sha&event=push&per_page=100" --paginate --jq '[.workflow_runs[]|"\(.path | split("@")[0]) \(.name) \(.status)/\(.conclusion // "-")"]|join(", ")') || runs="UNREADABLE"
     wf=$(gh api "repos/$OWNER/$R/actions/workflows" --jq .total_count) || wf="UNREADABLE"
     # a push run is minted within seconds of the merge; before RUNS_APPEAR_S a green list may still be missing a workflow
     age=$(gh api "repos/$OWNER/$R/commits/$sha" --jq .commit.committer.date | python3 -c 'import sys,datetime,time; print(int(time.time()-datetime.datetime.fromisoformat(sys.stdin.read().strip().replace("Z","+00:00")).timestamp()))' 2>/dev/null) || age=""
-    verified=0; RUNS_APPEAR_S=180
+    verified=0; RUNS_APPEAR_S=180; expected_push=""
+    # Explicit current default-branch push policy; tag/dispatch-only releases are excluded.
+    # Unknown positive workflow inventories cannot prove a complete expected set.
+    case "$R" in
+      containerlab-mcp) expected_push=.github/workflows/test.yml;;
+      TopoViewer) expected_push=.github/workflows/ci.yml;;
+      netpilot-probe-lab) expected_push=.github/workflows/probe-lab-checks.yml;;
+    esac
     if [ "$wf" = 0 ]; then verified=1; runs="none (the repo has no workflows)"
-    elif [ -n "$runs" ] && [ "$runs" != UNREADABLE ] && [[ "$age" =~ ^[0-9]+$ ]] && [ "$age" -ge $RUNS_APPEAR_S ] \
+    elif [[ "$wf" =~ ^[0-9]+$ ]] && [ "$wf" -gt 0 ] && [ -n "$expected_push" ] && printf '%s\n' "$runs" | tr ',' '\n' | awk 'NF{print $1}' | grep -qxF "$expected_push" \
+      && [ -n "$runs" ] && [ "$runs" != UNREADABLE ] && [[ "$age" =~ ^[0-9]+$ ]] && [ "$age" -ge $RUNS_APPEAR_S ] \
       && ! printf '%s\n' "$runs" | tr ',' '\n' | grep -qvE ' completed/success$'; then verified=1; fi
     say "RESULT: no deploy on merge for $R — nothing to watch. default-branch push run(s) for ${sha:0:8}: ${runs:-none yet} (read once: follow any that is not completed/success); the repo's own post-merge step is in deploy.md"
     if [ $verified = 1 ]; then [ -x "$SLOT" ] && "$SLOT" settle "$OWNER/$R" "$sha" clean
@@ -201,8 +209,8 @@ sentry_new() {  # project slug
 case "$R" in
   NetPilot-2-Backend)
     # health is sampled after a FAILED/CRASHED deploy too: it decides roll back vs fix forward (Codex, skills PR#54)
-    railway_wait NetPilot-2-Backend; dep_red=$red; [ $broken = 0 ] && { railway_health; [ $dep_red = 0 ] && main_run_wait; }
-    sentry_new netpilot-backend;;
+    railway_wait NetPilot-2-Backend; dep_red=$red; [ $broken = 0 ] && { railway_health; [ $dep_red = 0 ] && [ $red = 0 ] && [ $broken = 0 ] && main_run_wait; }
+    [ $outage = 0 ] && sentry_new netpilot-backend;;
   NetPilot-2-LB)
     railway_wait NetPilot-2-LB; [ $broken = 0 ] && railway_health;;
   NetPilot-2-Frontend)

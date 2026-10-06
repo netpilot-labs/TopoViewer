@@ -5,7 +5,7 @@ Contents: red-proof · CI-parity · frontend harness · backend harness · local
 ## Red-proof (every regression test; Lin, FE PR#195)
 - **A regression test counts once you have SEEN it fail without the fix.** Cheapest: TESTS FIRST — write the assertions on the
   unchanged tree, run red, then implement (FE PR#544). Fix already written: `<skill-dir>/scripts/redproof.sh <file> --ref
-  origin/main -- <test cmd>` (`--ref HEAD` for an uncommitted fix; `--sub <old> <new>` for one exact mutation) — it first runs
+  origin/<default> -- <test cmd>` (`<default>` is the remote default branch; `--ref HEAD` for an uncommitted fix; `--sub <old> <new>` for one exact mutation) — it first runs
   the command GREEN on the unmutated file (a test that is already failing proves nothing: exit 3, no proof; BE#962), runs
   bounded and puts the file back byte-checked even when the red run hangs; exit 0 = red seen. A NEW harness errors at
   fixture setup against `main`, which proves little: one `--sub` mutation per mechanism instead (clab PR#266, BE PR#953).

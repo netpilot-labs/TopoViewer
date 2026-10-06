@@ -16,6 +16,10 @@
       "kind": "link",
       "target": "../../.claude/skills/probe-testing"
     },
+    ".agents/skills/project-management": {
+      "kind": "link",
+      "target": "../../.claude/skills/project-management"
+    },
     ".agents/skills/prompt-engineering": {
       "kind": "link",
       "target": "../../.claude/skills/prompt-engineering"
@@ -69,7 +73,7 @@
     ".claude/skills/dev-workflow/merge.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "10158d8935ee13286eb28dccbd3d08879bbb2a531560bc0760d4bf6d80c441ad",
+      "sha256": "27e7199e85239642f566368f7c38a8b1300a00f690ca6eb764aef879a05db8ef",
       "source": "dev-workflow/merge.md"
     },
     ".claude/skills/dev-workflow/residuals.md": {
@@ -89,6 +93,12 @@
       "mode": 420,
       "sha256": "08fe966c7a8b94760d4c6efc5f00dc98c36f76272a70bac8e2cc2084f4986019",
       "source": "dev-workflow/screenshots.md"
+    },
+    ".claude/skills/dev-workflow/scripts/ci-jobs.py": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "8939334353af7b1c5ef984cb1e47a92d2009ab6dd20854e19d7a29bddeaf8b17",
+      "source": "dev-workflow/scripts/ci-jobs.py"
     },
     ".claude/skills/dev-workflow/scripts/ci-wait.sh": {
       "kind": "file",
@@ -117,13 +127,13 @@
     ".claude/skills/dev-workflow/scripts/merge-slot-selftest.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "bf47def66025ea81a45a3deb250e788533cbf416345eab93dafeed6e0a252b49",
+      "sha256": "f996ccc9d7df06f7b82e8ba9ea11a6cbabf95662092a640cc4399bf9cbe60c9b",
       "source": "dev-workflow/scripts/merge-slot-selftest.sh"
     },
     ".claude/skills/dev-workflow/scripts/merge-slot.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "8dd2546e160d5fd7040e378352ffffa587b840d0d0c89404e59267e99d0aaf99",
+      "sha256": "c2373a43b5b12371a9cdf242be5d0f120cda96867cd9ac303e4f73b516ca07e9",
       "source": "dev-workflow/scripts/merge-slot.sh"
     },
     ".claude/skills/dev-workflow/scripts/merge.sh": {
@@ -135,13 +145,13 @@
     ".claude/skills/dev-workflow/scripts/postmerge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "aa3e32d87d772fd294bfc92885ce15af8a3c3bfac53ac9f8e457d68d3bb7f0af",
+      "sha256": "79a953025a33e936b47430891e56c706e51320e9d546010a509acd14303cbd7e",
       "source": "dev-workflow/scripts/postmerge.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-gates.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "282b155df9ac13e11dc5cf75236c8f396a8deb2622cbe40f8c085e5489ff1663",
+      "sha256": "10d2c0881b5e296d155d2c3c1b058ce6400aea12a67c975a9aa7656db0335966",
       "source": "dev-workflow/scripts/pr-gates.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-threads.py": {
@@ -165,7 +175,7 @@
     ".claude/skills/dev-workflow/scripts/required-workflows.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "fad721bcb54abd50fa0d47de8d38ce6a346bb1446b3d4dae4f1ab57d96532a40",
+      "sha256": "3cccd2c0161f9b2c4ed7759240d5c889682fd07f69e8678b768d79aeec1c3553",
       "source": "dev-workflow/scripts/required-workflows.sh"
     },
     ".claude/skills/dev-workflow/scripts/with-db-lock.sh": {
@@ -189,7 +199,7 @@
     ".claude/skills/dev-workflow/test.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "75bdc44e85ef1ee88b80d82e1ca4f4f9800028a6e2b7f4ceabb304dd7dc29c51",
+      "sha256": "dc06925e89c25abba57c83b62d3561a7acf6a3519134cf943c1fbc2dabdbc88a",
       "source": "dev-workflow/test.md"
     },
     ".claude/skills/feature-research/SKILL.md": {
@@ -215,6 +225,12 @@
       "mode": 420,
       "sha256": "1b1475e4e90d043c28ce1fcccfb53588e2ce251a7b468ef7bc4aac45e8e1a38d",
       "source": "probe-testing/probe-recipes.md"
+    },
+    ".claude/skills/project-management/SKILL.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "070021a7f06dd8cccc66440cd3352b6ef10cfe4407079b4a724247e0327754c3",
+      "source": "project-management/SKILL.md"
     },
     ".claude/skills/prompt-engineering/SKILL.md": {
       "kind": "file",
