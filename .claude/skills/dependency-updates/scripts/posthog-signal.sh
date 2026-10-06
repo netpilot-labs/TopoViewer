@@ -6,11 +6,12 @@
 # Prints one line. Exit 0 = events seen · 1 = none in the window (REVIEW) · 2 = not configured.
 set -uo pipefail
 main() {
-  local window=15m since="" predicate description
+  local window=15m since="" capture_url="" predicate description
   while [ $# -gt 0 ]; do
     case "$1" in
       --window) [ $# -ge 2 ] || return 2; window=$2; shift 2;;
       --since) [ $# -ge 2 ] || return 2; since=$2; shift 2;;
+      --capture-url) [ $# -ge 2 ] || return 2; capture_url=$2; shift 2;;
       *) echo "posthog: unknown argument $1"; return 2;;
     esac
   done
@@ -22,6 +23,13 @@ main() {
     local mins; case "$window" in *m) mins=${window%m};; *h) mins=$(( ${window%h} * 60 ));; esac
     predicate="timestamp > now() - interval $mins minute"; description="in the last $window"
   fi
+  if [ -n "$capture_url" ]; then
+    # A unique URL opened in a fresh browser after the verified version identifies
+    # this deployment's real JavaScript pageview; old sessions cannot satisfy it.
+    [[ "$capture_url" =~ ^https://app\.netpilot\.io/sign-in\?netpilot_deploy_probe=[0-9a-f]{40}\.[0-9a-f]{32}$ ]] && [ -n "$since" ] || { echo "posthog: invalid deployment capture URL/boundary"; return 2; }
+    predicate="$predicate and event = '\$pageview' and properties.\$current_url = '$capture_url'"
+    description="for deployment browser probe $capture_url since $since"
+  fi
   local ws; ws=${WORKSPACE:-$(cd "$(dirname "$0")/../../../.." && pwd)}; [ -d "$ws/netpilot-devops" ] || ws=$(cd "$ws/.." && pwd)
   local envf="$ws/netpilot-devops/.env"
   [ -f "$envf" ] && { set -a; . "$envf"; set +a; }
@@ -30,9 +38,10 @@ main() {
   local pid=${POSTHOG_PROJECT_ID:-}
   [ -n "$pid" ] || { echo "posthog: POSTHOG_PROJECT_ID missing in netpilot-devops/.env"; return 2; }
   # HogQL through the Query API — the only endpoint a `query:read` personal key is scoped for
+  local payload; payload=$(python3 -c 'import json,sys; print(json.dumps({"query":{"kind":"HogQLQuery","query":"select count() from events where " + sys.argv[1]}}))' "$predicate") || return 2
   local n; n=$(curl -fsS -m 30 -H "Authorization: Bearer $POSTHOG_PERSONAL_API_KEY" -H "Content-Type: application/json" \
     -X POST "$host/api/projects/$pid/query/" \
-    -d "{\"query\":{\"kind\":\"HogQLQuery\",\"query\":\"select count() from events where ${predicate}\"}}" \
+    -d "$payload" \
     | python3 -c 'import sys,json; print(json.load(sys.stdin)["results"][0][0])' 2>/dev/null) || { echo "posthog: query failed (host $host, project $pid)"; return 2; }
   case "$n" in ''|*[!0-9]*) echo "posthog: query failed (host $host, project $pid)"; return 2;; esac
   if [ "$n" -gt 0 ]; then echo "posthog: $n event(s) captured $description (project $pid) — capture flowing"; return 0; fi

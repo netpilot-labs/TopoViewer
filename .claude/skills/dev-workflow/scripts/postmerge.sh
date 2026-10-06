@@ -39,7 +39,7 @@ set -uo pipefail
 # Repo → GitHub owner (the fleet spans two owners; a wrong owner reads as "no alerts, no PRs,
 # no dashboard" — containerlab-mcp was invisible to the pass all night, 2026-09-09).
 owner_of() { case "$1" in containerlab-mcp|TopoViewer) echo netpilot-labs;; *) echo "${OWNER:-lz-networks}";; esac; }
-DEPLOY_TIMEOUT_MIN=20; VERCEL_APPEAR_MIN=3; HEALTH_SAMPLES=5; HEALTH_MIN_OK=4; PARSE_TOLERANCE=3
+DEPLOY_TIMEOUT_MIN=20; VERCEL_APPEAR_MIN=3; POSTHOG_WAIT_S=900; HEALTH_SAMPLES=5; HEALTH_MIN_OK=4; PARSE_TOLERANCE=3
 R=${1:?repo}; sha=${2:?merge sha (full 40-char)}; shift 2
 [ "$R" = topoViewer ] && R=TopoViewer
 OWNER=$(owner_of "$R")
@@ -191,7 +191,7 @@ vercel_wait() {  # route url [version-url]
       v=$(curl -fsS -m 15 -H "Cache-Control: no-cache" "$2" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))' 2>/dev/null) || v=""
       [ "$v" = "$sha" ] && break; sleep 10
     done
-    if [ "$v" = "$sha" ]; then ph_since=$(( $(date +%s) + 1 )); say "version stamp $v"
+    if [ "$v" = "$sha" ]; then ph_since=$(date +%s); say "version stamp $v"
     else say "BROKEN: version.json did not prove ${sha:0:8} live after six reads (last stamp: ${v:-unreadable}) — verify the deployment before releasing the merge slot"; broken=1; fi
   fi
 }
@@ -222,9 +222,27 @@ case "$R" in
     if [ -x "$phs" ]; then
       if [ -z "$ph_since" ]; then say "BROKEN: no verified deployed version boundary for PostHog"; broken=1
       else
-      pout=$("$phs" --since "$ph_since"); prc=$?; say "$pout"
-      # the helper's status is the gate's (Codex, netpilot-skills PR#45): 2 = unavailable/failed → BROKEN; 1 = 0 events → REVIEW (exit 3)
-      case $prc in 0) ;; 2) say "BROKEN: posthog signal unavailable — no capture signal read"; broken=1;; 1) review=1;; *) say "BROKEN: posthog signal helper exited $prc — no capture signal read"; broken=1;; esac
+      # Allow capture ingestion after the verified version boundary. Querying immediately
+      # can only see the previous build or no events. Thirty-second polls allow up to
+      # fifteen minutes; an API failure remains BROKEN rather than being retried away.
+      ph_nonce=$(python3 -c 'import secrets; print(secrets.token_hex(16))') || { say "BROKEN: cannot create deployment capture probe"; exit 2; }
+      ph_url="https://app.netpilot.io/sign-in?netpilot_deploy_probe=$sha.$ph_nonce"
+      say "PostHog probe: open $ph_url in a FRESH browser tab now; confirm the loaded deployment is $sha (deploy.md). Do not manufacture a capture via API."
+      ph_deadline=$(( $(date +%s) + POSTHOG_WAIT_S ))
+      for ((ph_attempt=1; ph_attempt<=30; ph_attempt++)); do
+        sleep 30
+        pout=$("$phs" --since "$ph_since" --capture-url "$ph_url"); prc=$?
+        case $prc in
+          0) say "$pout"; break;;
+          2) say "$pout"; say "BROKEN: posthog signal unavailable — no capture signal read"; broken=1; break;;
+          1)
+            if [ "$ph_attempt" -eq 30 ] || [ "$(date +%s)" -ge "$ph_deadline" ]; then
+              say "$pout"; review=1; break
+            fi
+            say "posthog: awaiting capture after verified deployment (poll $ph_attempt/30)";;
+          *) say "$pout"; say "BROKEN: posthog signal helper exited $prc — no capture signal read"; broken=1; break;;
+        esac
+      done
       fi
     else say "BROKEN: required posthog signal helper missing or not executable — no capture signal read"; broken=1; fi;;
   netpilot-marketing)

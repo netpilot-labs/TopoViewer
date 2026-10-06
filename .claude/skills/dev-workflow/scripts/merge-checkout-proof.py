@@ -29,31 +29,34 @@ def epoch(value):
 
 
 def checkout_sha(log, steps, pr):
-    windows = [s for s in steps if re.fullmatch(r"Run actions/checkout@v[2-7]", s.get("name", ""))
-               and s.get("status") == "completed" and s.get("conclusion") == "success"]
-    if len(windows) != 1:
-        raise ValueError("one successful standard checkout action required per job")
-    step = windows[0]
-    start, end = epoch(step["started_at"]), epoch(step["completed_at"]) + 1
-    lines = []
+    # Display names are editable (for example, "Checkout code"). Identify the
+    # recorded git checkout protocol inside one successful step's timing instead.
+    timed = []
     for line in log.splitlines():
         stamp, separator, text = line.partition(" ")
         if separator:
             try:
-                if start <= epoch(stamp) < end:
-                    lines.append(text)
+                timed.append((epoch(stamp), text))
             except ValueError:
                 pass
-    checkouts = [x for x in lines if re.fullmatch(
-        r"\[command\].*/git checkout --progress --force refs/remotes/pull/" + str(pr) + r"/merge", x)]
-    hashes = []
-    for i, text in enumerate(lines[:-1]):
-        if re.fullmatch(r"\[command\].*/git log -1 --format=%H", text):
-            if re.fullmatch(r"[0-9a-f]{40}", lines[i + 1]):
-                hashes.append(lines[i + 1])
-    if len(checkouts) != 1 or len(hashes) != 1:
-        raise ValueError("unambiguous default PR-merge checkout SHA missing")
-    return hashes[0]
+    candidates = []
+    for step in steps:
+        if step.get("status") != "completed" or step.get("conclusion") != "success":
+            continue
+        start, end = epoch(step["started_at"]), epoch(step["completed_at"]) + 1
+        lines = [text for stamp, text in timed if start <= stamp < end]
+        checkouts = [i for i, text in enumerate(lines) if re.fullmatch(
+            r"\[command\].*/git checkout --progress --force refs/remotes/pull/" + str(pr) + r"/merge", text)]
+        hashes = []
+        for i, text in enumerate(lines[:-1]):
+            if re.fullmatch(r"\[command\].*/git log -1 --format=%H", text):
+                if re.fullmatch(r"[0-9a-f]{40}", lines[i + 1]):
+                    hashes.append((i, lines[i + 1]))
+        if len(checkouts) == 1 and len(hashes) == 1 and checkouts[0] < hashes[0][0]:
+            candidates.append(hashes[0][1])
+    if len(candidates) != 1:
+        raise ValueError("one unambiguous successful PR-merge checkout protocol required per job")
+    return candidates[0]
 
 
 def prove(repo, pr, head, tip, runs):

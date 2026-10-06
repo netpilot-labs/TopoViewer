@@ -15,7 +15,7 @@ cmd=${1:?}; shift
 case "$cmd" in
   pypi-cap) capper=${1:?}; pkg=${2:?}
     curl -sf "https://pypi.org/pypi/$capper/json" | jq -r --arg p "$pkg" \
-      '"\(.info.name) latest \(.info.version)", ((.info.requires_dist // [])[] | select(ascii_downcase | startswith($p | ascii_downcase)) | "  requires: \(.)")';;
+      '"\(.info.name) latest \(.info.version)", ((.info.requires_dist // [])[] | select((capture("^(?<name>[A-Za-z0-9][A-Za-z0-9._-]*)").name | ascii_downcase | gsub("[-_.]+"; "-")) == ($p | ascii_downcase | gsub("[-_.]+"; "-"))) | "  requires: \(.)")';;
   npm-cap) capper=${1:?}; pkg=${2:?}
     npm view "$capper" version dependencies peerDependencies --json 2>/dev/null | jq -r --arg p "$pkg" \
       '"\($p) latest \(.version)", "  dependencies: \(.dependencies[$p] // "-")", "  peer: \(.peerDependencies[$p] // "-")"';;

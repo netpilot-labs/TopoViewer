@@ -16,7 +16,9 @@ set -uo pipefail
 # iteration, so reading it here leaked containerlab-mcp's netpilot-labs onto the next repo
 # (NetPilot-2-LB queried as netpilot-labs/NetPilot-2-LB → 404 alerts + invisible dashboard #6,
 # misread as "no dependency graph"; pass-638 2026-09-09).
-owner_of() { case "$1" in containerlab-mcp) echo netpilot-labs;; *) echo lz-networks;; esac; }
+CONFIGURED_OWNER=${OWNER:-lz-networks}
+owner_of() { case "$1" in containerlab-mcp) echo netpilot-labs;; *) echo "$CONFIGURED_OWNER";; esac; }
+inventory_bad=0
 PR_STALE_DAYS=14
 ALERT_STALE_DAYS=30
 FLEET="NetPilot-2-Backend NetPilot-2-Frontend netpilot-marketing containerlab-mcp NetPilot-2-LB"
@@ -32,8 +34,15 @@ for R in $repos; do
   echo "== $R"
   OWNER=$(owner_of "$R")
   # --- Dependabot alerts -------------------------------------------------------------
-  out=$(gh api "repos/$OWNER/$R/dependabot/alerts?state=open&per_page=100" 2>&1) || {
-    if echo "$out" | grep -q '"Not Found"'; then echo "  alerts: API 404 — Dependabot alerts are enabled but this repo has no dependency graph (Dockerfile-only NetPilot-2-LB, 2026-09-09): nothing to list"; else echo "  alerts: unavailable (${out%%$'\n'*})"; fi; out='[]'; }
+  if out=$(gh api "repos/$OWNER/$R/dependabot/alerts?state=open&per_page=100" --paginate --slurp 2>&1); then
+    out=$(printf '%s\n' "$out" | jq -ce 'if type=="array" and all(.[]; type=="array") then [.[][]] else error("invalid paginated alerts") end') || {
+      echo '  FINDING: alerts unavailable (unreadable paginated response)'; inventory_bad=2; out='[]'; }
+  else
+    if [ "$R" = NetPilot-2-LB ] && printf '%s' "$out" | grep -q '"Not Found"'; then
+      echo '  alerts: API 404 — Dockerfile-only LB has no dependency graph';
+    else echo "  FINDING: alerts unavailable (${out%%$'\n'*})"; inventory_bad=2; fi
+    out='[]'
+  fi
   echo "$out" | jq -r '.[] | [.number, .security_advisory.severity, .dependency.package.name,
       .security_vulnerability.vulnerable_version_range,
       (.security_vulnerability.first_patched_version.identifier // "NONE"),
@@ -45,13 +54,15 @@ for R in $repos; do
     [ "$age" -gt "$ALERT_STALE_DAYS" ] && echo "  FINDING: alert #$n $pkg open ${age}d — needs a ledger row with a trigger"
   done
   # --- Renovate PRs ------------------------------------------------------------------
-  gh pr list --repo "$OWNER/$R" --author app/renovate --state open --limit 50 \
+  prs=$(gh pr list --repo "$OWNER/$R" --app renovate --state open --limit 50 \
     --json number,title,createdAt,isDraft,mergeStateStatus,statusCheckRollup \
     --jq '.[] | [.number, .createdAt, .mergeStateStatus,
           ([.statusCheckRollup[]? | (.conclusion // .state)] | if any(. == "FAILURE") then "RED"
              elif length == 0 then "NO-CI" elif all(. == "SUCCESS" or . == "SKIPPED" or . == "NEUTRAL") then "GREEN" else "PENDING" end),
-          .title] | @tsv' 2>/dev/null |
+          .title] | @tsv' 2>&1) || { echo "  FINDING: Renovate PRs unavailable (${prs%%$'\n'*})"; inventory_bad=2; prs=''; }
+  printf '%s\n' "$prs" |
   while IFS=$'\t' read -r n created state ci title; do
+    [ -n "$n" ] || continue
     age=$(days_since "$created")
     printf '  PR #%s %sd %s %s %s\n' "$n" "$age" "$ci" "$state" "$title"
     [ "$ci" = RED ] && echo "  FINDING: PR #$n is RED — diagnose from the lockfile (scripts/lockdiff.sh), never from the PR table"
@@ -64,12 +75,15 @@ for R in $repos; do
   # filter returns [] for GitHub *App* bots (the app-slug form is not accepted), silently reporting
   # "none open" on every repo whose dashboard is open (false-clean, pass-638 2026-09-09). The author
   # login DOES read back as "app/renovate" in the JSON, so filter it there.
-  issue=$(gh issue list --repo "$OWNER/$R" --state open --limit 200 --json number,title,author --jq '[.[]|select(.title=="Dependency Dashboard" and .author.login=="app/renovate")][0].number // empty' 2>/dev/null)
+  issue=$(gh issue list --repo "$OWNER/$R" --state open --limit 200 --json number,title,author --jq '[.[]|select(.title=="Dependency Dashboard" and .author.login=="app/renovate")][0].number // empty' 2>&1) || { echo "  FINDING: dashboard unavailable (${issue%%$'\n'*})"; inventory_bad=2; continue; }
   if [ -n "$issue" ]; then
     echo "  dashboard: #$issue"
-    gh issue view "$issue" --repo "$OWNER/$R" --json body --jq '.body' |
+    body=$(gh issue view "$issue" --repo "$OWNER/$R" --json body --jq '.body' 2>&1) || { echo "  FINDING: dashboard body unavailable (${body%%$'\n'*})"; inventory_bad=2; continue; }
+    printf '%s\n' "$body" |
       awk '/^## Detected Dependencies/{exit} /^## /{print "   " $0} /^ - \[ \]/{print "    " $0}'
   else
     echo "  dashboard: none open — Renovate not installed here, or the issue was closed (reopen it: gotchas §1)"
   fi
 done
+
+exit "$inventory_bad"

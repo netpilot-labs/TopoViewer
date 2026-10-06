@@ -432,6 +432,15 @@ while :; do
   if [ "$CUR" != "$HEAD" ]; then
     echo "HEAD MOVED $HEAD -> $CUR (someone pushed; restart the watch)"; exit 2
   fi
+  if ! latest_req="$(req_ts)"; then
+    echo "BROKEN: cannot refresh latest review request boundary"; exit 2
+  fi
+  [ -n "$latest_req" ] || { echo "BROKEN: missing review request boundary during watch"; exit 2; }
+  if [[ "$latest_req" > "$REQTS" ]]; then
+    REQTS="$latest_req"
+    START=$(date +%s); PF_REREQ=0; PF_T=0
+    say "new review request observed at $REQTS; reset acknowledgement timers"
+  fi
   poll_quiet=$QUIET; QUIET=1
   report "$HEAD" "$REQTS"
   QUIET=$poll_quiet

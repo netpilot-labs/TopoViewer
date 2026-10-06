@@ -161,7 +161,7 @@ done
 MP1=$(gh api "repos/$REPO/commits/$MOID" --jq '.parents[0].sha' 2>/dev/null)
 # a base that moved inside the window keeps the slot in EVERY repo (the sha recorded, so postmerge.sh can settle it): in a
 # no-watch repo too, nothing else merges until main is verified (Codex, skills PR#60)
-[ "$MP1" = "$TIP2" ] || { [ $WATCH = 0 ] && "$SK/merge-slot.sh" sha "$REPO" "$TOKEN" "$MOID" || final "BROKEN merged as $MOID but the merge-slot SHA could not be recorded; reconcile the held slot before deploy watch or another merge" 2; echo "merge.sh: WARNING — merge commit's parent ${MP1:0:10} != the base tip checked seconds earlier ${TIP2:0:10}: main advanced inside the window; verify main's CI / revert per deploy.md — the merge slot stays held until \`postmerge.sh ${REPO#*/} $MOID\`"; final "BROKEN merged onto a base that moved inside the window; merge oid $MOID" 2; }
+[ "$MP1" = "$TIP2" ] || { if [ $WATCH = 0 ]; then "$SK/merge-slot.sh" sha "$REPO" "$TOKEN" "$MOID" || final "BROKEN merged as $MOID but the merge-slot SHA could not be recorded; reconcile the held slot before deploy watch or another merge" 2; fi; echo "merge.sh: WARNING — merge commit's parent ${MP1:0:10} != the base tip checked seconds earlier ${TIP2:0:10}: main advanced inside the window; verify main's CI / revert per deploy.md — the merge slot stays held until \`postmerge.sh ${REPO#*/} $MOID\`"; final "BROKEN merged onto a base that moved inside the window; merge oid $MOID" 2; }
 [ $WATCH = 0 ] && { KEEP=0; MERGED=1; }   # proven merged on the checked base, no deploy watch to wait for: released at exit — and an acknowledged hold with it
 final "MERGED $MOID" 0
 }

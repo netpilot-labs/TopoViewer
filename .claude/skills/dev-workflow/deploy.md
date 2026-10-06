@@ -73,6 +73,11 @@ workflows). Then the repo's own step: containerlab-mcp — none
   (FE PR#376; setup.md).
 - **"An unexpected error occurred when running this build" AFTER `Build Completed`** = platform: `npx vercel redeploy <dpl_id>`
   (no `--yes`); a CLI redeploy creates no GitHub deployment record — confirm with `npx vercel ls --prod` (FE PR#550).
+- **Frontend capture proof** (netpilot-skills PR#78): after the verified live version, `postmerge.sh` prints a unique
+  deployment-probe URL. Open it in a fresh browser tab with normal analytics enabled; verify the current version and
+  loaded client assets, and retain that receipt with the URL. The helper reads its real `$pageview`
+  [Current URL](https://posthog.com/docs/product-analytics/paths). Never fake capture through the API. No matching event
+  = REVIEW; attribute browser blocking, delayed ingestion, or broken capture before acknowledging the hold.
 - **Frontend `postmerge.sh` exit 2 whose ONLY `BROKEN` line is the posthog one, preceded by `posthog: not configured
   (POSTHOG_PERSONAL_API_KEY missing …)`** = a machine without the key (the WSL workstation): not a revert signal — confirm the
   deployment `success` and `/version.json` = the merge sha by hand and record both (FE PR#586, 2026-09-30); the next
