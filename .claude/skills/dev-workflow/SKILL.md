@@ -66,7 +66,7 @@ Dev flow:
 - [ ] 8  merge.sh --dry-run: base check + merge-ref + gates read; main moved → rebase + re-verify (merge.md)
 - [ ] 9  Endpoint: auto = merge.sh (runs from anywhere) · hold = PR-ready report, stop (full delegation in scope: merge.sh)
 - [ ] 10 postmerge.sh <repo> <merge-sha> (every repo; a no-deploy repo then does its own step, deploy.md); exit 1 → impact decides: outage or many users = roll back, else fix forward (deploy.md)
-- [ ] 11 Cleanup: pull main, remove worktree, delete branches (+ screenshots ref), board rows; delegated lanes → lane-audit.sh;
+- [ ] 11 Cleanup: pull the remote default branch, remove worktree, delete branches (+ screenshots ref), board rows; delegated lanes → lane-audit.sh;
          then loose-ends.sh — every finding is cleaned up, closed out, or raised to Lin
 - [ ] 12 Learning pass (skill-maintenance); lessons-lint.sh if this skill changed; last PR comment `learning-pass: <sha>|none (why)`
 ```
@@ -88,9 +88,9 @@ Step notes:
   finding fixed / accepted as residual / deferred / routed (acceptable risk, never zero
   findings). `pr-gates.sh <pr> --repo o/n` answers both; READY means dispositioned, so read
   the verdict's substance. There is no branch protection — you are the gate.
-- **11** `git checkout main && git pull --ff-only` in the main checkout; `git worktree remove --force <path>`; delete the branch
+- **11** Read `origin`’s remote default branch, then `git checkout <default> && git pull --ff-only` in the main checkout; `git worktree remove --force <path>`; delete the branch
   locally and remotely, plus `refs/heads/screenshots/<issue>` on a screenshots PR. Prune other merged branches by SHA only
-  (tip == a merged PR's `headRefOid`, or `ahead_by == 0`), never `main`, an open-PR branch or a checked-out one. Board-owned
+  (tip == a merged PR's `headRefOid`, or `ahead_by == 0`), never the remote default branch, an open-PR branch or a checked-out one. Board-owned
   work updates the readme rows and the project folder's INFLIGHT (agent repos) NOW, not at stage end.
 - **Loose ends — the last act of ANY agent-led work** (a PR, a lane wave, a project close; Lin, 2026-10-05): run
   `loose-ends.sh --mine <your branch or PR>` (a coordinator: ONCE for all its lanes, after `lane-audit.sh`; `--project <N>` /

@@ -18,7 +18,8 @@ Contents: red-proof · CI-parity · frontend harness · backend harness · local
   a stale one, BE#260) and is bounded: a red run that HANGS leaves the MUTATED file on disk (BE PR#904, 2026-09-29).
 - **Never mock the transform under test** — at least one test drives the REAL pipeline from raw inputs (#195). A fixture that
   encodes your BELIEF about an external system proves nothing: match what the program actually writes (tusd `.info`, clab#39;
-  `httpx.MockTransport` buffers, BE#258).
+  `httpx.MockTransport` buffers, BE#258). Smoke CLI reads on the installed client: `gh api --slurp` rejects `--jq`;
+  pipe paginated JSON to external `jq`, and make the mock reject that flag combination (skills PR#78, 2026-10-06).
 - A "defaults to X" test after a `beforeEach` that sets X is vacuous; module singletons need `vi.resetModules()` + dynamic
   import (FE PR#309). Cancellation tests need a real suspension point (BE#258). Prepared-statement/plan-cache behavior: loop the
   statement ≥10× on ONE pooled connection (BE#325).

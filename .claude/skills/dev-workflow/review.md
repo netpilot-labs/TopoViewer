@@ -37,8 +37,9 @@ Contents: the loop · reading the verdict · disposition (exposure test, the fou
   any closure comment — it was matched as the clean pass and "READY" was repeated over six P2s (skills PR#60 R6).
 - A "Codex Review Summary" issue comment (🔄 Running → ✅ Completed, 7-char sha) is Codex's STATUS line, not a verdict —
   the script ignores it by design (PR #21, 2026-09-28).
-- Match the head as a short-sha PREFIX, the login by substring (`test("codex")`), `--paginate` the per-PR endpoints, never the
-  repo-wide comments endpoint (BE#818).
+- Match the head as a short-sha PREFIX, the login by exact verified connector identity (`chatgpt-codex-connector`, including its REST `[bot]` spelling), `--paginate` the per-PR endpoints, never the
+  repo-wide comments endpoint (BE#818). A thread verdict uses its originating `originalCommit`, not `commit`: GitHub
+  can reanchor the latter onto an unreviewed push (observed FE PR#604, skills PR#78, 2026-10-06).
 - 👀 on the request = picked up (verdict ~2–15 min); no 👀 after ~5 min = re-request; 👀 is removed when done. Codex OFTEN
   auto-reviews a push but not always — a pushed head is unreviewed until a verdict on it exists. "Something went wrong" /
   "usage limits" comments are transient — re-request.

@@ -17,7 +17,7 @@
 #                                 merged in a repo with no deploy watch (an acknowledged hold is cleared with it)
 #   settle  <o/r> <sha> <result>  postmerge.sh's exit: `clean` frees it; RED | BROKEN | REVIEW (+REVIEW when such lines
 #                                 rode along) is written into the slot and it STAYS held — deploy.md: nothing else
-#                                 merges until that result is read. `clean-skip` = clean with Sentry skipped
+#                                 merges until that result is read. `clean-skip` keeps a SENTRY-SKIPPED hold until Sentry is read or acknowledged
 # A slot whose watch ended RED/BROKEN/REVIEW opens only to MERGE_SLOT_ACK=<holder pr>: that result was read and
 # dispositioned (its fix or revert, or the next merge once every line is attributed) — and if that run ends without
 # merging, the acknowledged holder is put back; once it MERGED the hold is gone (`sha` drops it where a watch follows,
@@ -81,7 +81,7 @@ case "$cmd" in
     if [ ! -d "$slot" ]; then
       # a LATE re-run (the dependency ride-out) that ends non-clean after its slot was freed: record it as held, unless a
       # newer holder took the slot meanwhile (the mkdir loses; that holder is left alone)
-      case "$res" in clean|clean-skip) exit 0;; esac
+      case "$res" in clean) exit 0;; clean-skip) res=SENTRY-SKIPPED;; esac
       lpr=$(gh api "repos/$repo/commits/$sha/pulls" --jq '.[0].number // empty' 2>/dev/null); lpr=${lpr:-${sha:0:7}}
       mkdir -p "$dir" 2>/dev/null; mkdir "$slot" 2>/dev/null || { echo "merge-slot: late $res for ${sha:0:10} NOT recorded — the $repo slot has a newer holder; tell that lane" >&2; exit 0; }
       echo "$lpr $sha late.$$ $res" > "$hf"; echo "merge slot for $repo is now held ($res, late re-run of ${sha:0:10}): the next merge in this repo takes MERGE_SLOT_ACK=$lpr once this result is dispositioned (deploy.md)"; exit 0
@@ -93,10 +93,10 @@ case "$cmd" in
         case "$res" in clean|clean-skip) ;; *) echo "merge-slot: $res for ${sha:0:10} NOT recorded — the $repo slot belongs to PR#$hpr; tell that lane" >&2;; esac; exit 0; }
     fi
     case "$res" in
-      clean|clean-skip)
+      clean)
         # a watch that only now ends clean frees the slot; a RE-RUN over a held result frees it only when it read every
         # signal (no --skip-sentry) and no REVIEW line is pending — those age out of the query window unattributed
-        if [ "$hstate" = inflight ] || { [ "$res" = clean ] && [[ "$hstate" != *REVIEW* ]]; }; then
+        if [[ "$hstate" != *REVIEW* ]]; then
           # under the ACK handoff's one-instant mutex: of a settling run and an acknowledged acquire one wins, and the
           # holder is removed only if it is still the record that was read (Codex, skills PR#60)
           [ -d "$slot/ack" ] && [ "$(age "$slot/ack")" -ge 1 ] && rmdir "$slot/ack" 2>/dev/null
@@ -104,7 +104,17 @@ case "$cmd" in
           rd; if [ "$hline" = "$was" ]; then rm -f "$hf" "$slot/prev"; rmdir "$slot/ack" 2>/dev/null; rmdir "$slot" 2>/dev/null; echo "merge slot for $repo released"
           else rmdir "$slot/ack" 2>/dev/null; echo "merge slot for $repo changed hands this instant — left to its new holder (PR#$hpr)"; fi
         else echo "merge slot for $repo stays held ($hstate): a re-run does not clear it ($([ "$res" = clean-skip ] && echo 'Sentry was skipped' || echo 'its REVIEW lines still need attributing')) — MERGE_SLOT_ACK=$hpr once it is dispositioned"; fi;;
-      *) echo "$hpr $sha $htok $res" > "$hf"; echo "merge slot for $repo stays held ($res): the next merge in this repo takes MERGE_SLOT_ACK=$hpr once this result is dispositioned (deploy.md)";;
+      *)
+        [ "$res" = clean-skip ] && res=SENTRY-SKIPPED
+        # Serialize every settlement with ACK handoff, and retain a newer holder.
+        [ -d "$slot/ack" ] && [ "$(age "$slot/ack")" -ge 1 ] && rmdir "$slot/ack" 2>/dev/null
+        was=$hline; mkdir "$slot/ack" 2>/dev/null || { echo "merge slot for $repo is changing hands this instant — $res NOT recorded; re-run postmerge.sh"; exit 0; }
+        rd
+        if [ "$hline" = "$was" ]; then
+          echo "$hpr $sha $htok $res" > "$hf"
+          echo "merge slot for $repo stays held ($res): the next merge in this repo takes MERGE_SLOT_ACK=$hpr once this result is dispositioned (deploy.md)"
+        else echo "merge slot for $repo changed hands this instant — $res NOT recorded; left to PR#$hpr"; fi
+        rmdir "$slot/ack" 2>/dev/null;;
     esac;;
   *) echo "merge-slot.sh: unknown command '$cmd'" >&2; exit 2;;
 esac

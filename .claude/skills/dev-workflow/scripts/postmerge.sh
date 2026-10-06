@@ -67,7 +67,7 @@ case "$R" in
     verified=0; RUNS_APPEAR_S=180
     if [ "$wf" = 0 ]; then verified=1; runs="none (the repo has no workflows)"
     elif [ -n "$runs" ] && [ "$runs" != UNREADABLE ] && [[ "$age" =~ ^[0-9]+$ ]] && [ "$age" -ge $RUNS_APPEAR_S ] \
-      && ! printf '%s\n' "$runs" | tr ',' '\n' | grep -qvE ' completed/(success|skipped)$'; then verified=1; fi
+      && ! printf '%s\n' "$runs" | tr ',' '\n' | grep -qvE ' completed/success$'; then verified=1; fi
     say "RESULT: no deploy on merge for $R — nothing to watch. default-branch push run(s) for ${sha:0:8}: ${runs:-none yet} (read once: follow any that is not completed/success); the repo's own post-merge step is in deploy.md"
     if [ $verified = 1 ]; then [ -x "$SLOT" ] && "$SLOT" settle "$OWNER/$R" "$sha" clean
     else [ -x "$SLOT" ] && "$SLOT" peek "$OWNER/$R" | grep -q . && say "main is not verified for ${sha:0:8}: a merge-slot hold kept for this sha stays — re-run this once the run is green"; fi
@@ -89,8 +89,17 @@ probe_samples() {  # url [curl timeout] -> HEALTH_SAMPLES samples. Only an HTTP 
     printf '%s ' "$code"; sleep 3
   done; echo
   if [ $ok -ge $HEALTH_MIN_OK ]; then say "probe $url ok=$ok/$HEALTH_SAMPLES"
-  elif [ $bad -gt $((HEALTH_SAMPLES-HEALTH_MIN_OK)) ]; then say "RED: $url answered non-200 $bad× of $HEALTH_SAMPLES (ok=$ok)"; red=1; outage=1
-  else say "BROKEN: $url gave no HTTP answer $unread× of $HEALTH_SAMPLES (DNS, connect or timeout from this machine) — not an outage reading; probe it from another network, and roll back if users cannot reach it"; broken=1; fi
+  elif [ $bad -gt $((HEALTH_SAMPLES-HEALTH_MIN_OK)) ]; then say "RED: $url answered non-200 ${bad}× of $HEALTH_SAMPLES (ok=$ok)"; red=1; outage=1
+  else say "BROKEN: $url gave no HTTP answer ${unread}× of $HEALTH_SAMPLES (DNS, connect or timeout from this machine) — not an outage reading; probe it from another network, and roll back if users cannot reach it"; broken=1; fi
+}
+
+railway_health() {
+  probe_samples https://api.netpilot.io/health
+  if [ $red = 0 ] && [ $broken = 0 ]; then
+    say "railway health: initial samples passed; checking again after five minutes"
+    sleep 300
+    probe_samples https://api.netpilot.io/health
+  fi
 }
 
 railway_wait() {  # service -> waits for the sha's deployment
@@ -133,20 +142,25 @@ main_run_wait() {  # backend: the push run on main for this sha
       say "RED: main run $id ended $st"; [ $red = 0 ] && ci_only=$id; red=1; return;;
     *) say "BROKEN: main run $id ended $st — success was not verified"; broken=1; return;;
   esac
-  local jobs badjobs
+  local jobs badjobs authjob
   jobs=$(gh run view "$id" -R "$OWNER/$R" --json jobs --jq '.jobs[]|"  job \(.name): \(.conclusion)"') || { say "BROKEN: cannot read main run $id jobs"; broken=1; return; }
   printf '%s\n' "$jobs"
   badjobs=$(gh run view "$id" -R "$OWNER/$R" --json jobs --jq '[.jobs[]|select(.conclusion!="success" and .conclusion!="skipped")]|length') || { say "BROKEN: cannot verify main run $id job conclusions"; broken=1; return; }
   [[ "$badjobs" =~ ^[0-9]+$ ]] || { say "BROKEN: invalid main run $id job conclusions"; broken=1; return; }
   if [ "$badjobs" -ne 0 ]; then
     say "RED: main run $id has a failed job — the real-Clerk job runs only here (mechanics §8)"; [ $red = 0 ] && ci_only=$id; red=1
-  else say "main run $id: all jobs green/skipped"; fi
+  else
+    authjob=$(gh run view "$id" -R "$OWNER/$R" --json jobs --jq '[.jobs[]|select(.name=="API Integration Tests (Real Clerk Auth)")]|if length==1 then .[0].conclusion else "missing-or-duplicate" end') || { say "BROKEN: cannot verify main run $id real-Clerk job"; broken=1; return; }
+    if [ "$authjob" != success ]; then
+      say "RED: main run $id real-Clerk job was not successful ($authjob)"; [ $red = 0 ] && ci_only=$id; red=1
+    else say "main run $id: all jobs green/skipped; real-Clerk job success verified"; fi
+  fi
 }
 
 vercel_wait() {  # route url [version-url]
   local deadline=$(( $(date +%s) + DEPLOY_TIMEOUT_MIN*60 )) appear=$(( $(date +%s) + VERCEL_APPEAR_MIN*60 )) id st
   while :; do
-    id=$(gh api "repos/$OWNER/$R/deployments?sha=$sha" --jq '.[0].id // empty')
+    id=$(gh api "repos/$OWNER/$R/deployments?sha=$sha&environment=production" --jq '.[0].id // empty')
     [ -n "$id" ] && break
     [ $(date +%s) -gt $appear ] && { say "BROKEN: no Vercel deployment for ${sha:0:8} after ${VERCEL_APPEAR_MIN} min — event miss; push an empty lz-networks-authored commit (dev-workflow/deploy.md)"; broken=1; return; }
     sleep 15
@@ -187,10 +201,10 @@ sentry_new() {  # project slug
 case "$R" in
   NetPilot-2-Backend)
     # health is sampled after a FAILED/CRASHED deploy too: it decides roll back vs fix forward (Codex, skills PR#54)
-    railway_wait NetPilot-2-Backend; dep_red=$red; [ $broken = 0 ] && { probe_samples https://api.netpilot.io/health; [ $dep_red = 0 ] && main_run_wait; }
+    railway_wait NetPilot-2-Backend; dep_red=$red; [ $broken = 0 ] && { railway_health; [ $dep_red = 0 ] && main_run_wait; }
     sentry_new netpilot-backend;;
   NetPilot-2-LB)
-    railway_wait NetPilot-2-LB; [ $broken = 0 ] && probe_samples https://api.netpilot.io/health;;
+    railway_wait NetPilot-2-LB; [ $broken = 0 ] && railway_health;;
   NetPilot-2-Frontend)
     vercel_wait https://app.netpilot.io/sign-in https://app.netpilot.io/version.json; sentry_new netpilot-frontend
     # capture signal (mechanics §8): REVIEW on 0 events, "not configured" without a personal key — never red by itself
@@ -200,7 +214,7 @@ case "$R" in
     if [ -x "$phs" ]; then
       pout=$("$phs" --window 15m); prc=$?; say "$pout"
       # the helper's status is the gate's (Codex, netpilot-skills PR#45): 2 = unavailable/failed → BROKEN; 1 = 0 events → REVIEW (exit 3)
-      case $prc in 2) say "BROKEN: posthog signal unavailable — no capture signal read"; broken=1;; 1) review=1;; esac
+      case $prc in 0) ;; 2) say "BROKEN: posthog signal unavailable — no capture signal read"; broken=1;; 1) review=1;; *) say "BROKEN: posthog signal helper exited $prc — no capture signal read"; broken=1;; esac
     else say "posthog signal: dependency-updates/scripts/posthog-signal.sh not vendored here — skipped (a consumer without that skill runs no dependency gate)"; fi;;
   netpilot-marketing)
     vercel_wait https://www.netpilot.io/;;

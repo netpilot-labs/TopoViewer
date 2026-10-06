@@ -76,7 +76,7 @@ gq() {
     reviews(last:50){totalCount nodes{commit{oid} submittedAt author{login} body
       comments(first:50){totalCount nodes{body}}}}
     comments(last:50){totalCount nodes{author{login} authorAssociation createdAt body}}
-    reviewThreads(last:100){totalCount nodes{isResolved comments(last:1){nodes{author{login} commit{oid} createdAt body path}}}}
+    reviewThreads(last:100){totalCount nodes{isResolved comments(first:1){nodes{author{login} originalCommit{oid} createdAt body path}}}}
   }}}" --jq "$1" 2>/dev/null
 }
 
@@ -97,6 +97,7 @@ req_ts() {
   local c f
   c="$(gq '[.data.repository.pullRequest.comments.nodes[]
       |select((.author.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]")|not)
+      |select((.authorAssociation // "")|IN("OWNER","MEMBER","COLLABORATOR"))
       |select(.body|test("@codex review";"i"))|.createdAt]|last // ""')" || return 2
   # The ready-for-review flip is a request too: it triggers its own Codex
   # round, whose verdict can land AFTER the previous request's answer — a
@@ -104,7 +105,7 @@ req_ts() {
   # 2026-09-13: flip 19:44:25, READY read at 19:50 on the 19:42 verdict, the
   # flip round landed at 19:54 with 3 findings). The later of the two bounds
   # the current ask.
-  f="$(gh api "repos/$REPO/issues/$PR/timeline" --paginate        --jq '[.[]|select(.event=="ready_for_review")|.created_at]|last // ""' 2>/dev/null)" || return 2
+  f="$(gh api "repos/$REPO/issues/$PR/timeline" --paginate --slurp 2>/dev/null | jq -r '[.[][]|select(.event=="ready_for_review")|.created_at]|max // ""' 2>/dev/null)" || return 2
   if [ -n "$f" ] && [[ "$f" > "$c" ]]; then echo "$f"; else echo "$c"; fi
 }
 
@@ -177,7 +178,7 @@ report() {
   local c3
   c3="$(gq "[.data.repository.pullRequest.reviewThreads.nodes[]
         |select(.comments.nodes[0].author.login|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\"))
-        |select(.comments.nodes[0].commit.oid==\"$head\")
+        |select(.comments.nodes[0].originalCommit.oid==\"$head\")
         |select(.comments.nodes[0].createdAt > \"$reqts\")]|length")"
 
   local unres
@@ -201,11 +202,10 @@ report() {
         |select(.body|contains(\"$head10\"))
         |select(.createdAt > \"$reqts\")]|length")"
   reqid="$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
-          --jq "[.[]|select((.user.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\")|not)|select(.body|test(\"@codex review\";\"i\"))]|last|.id // empty" 2>/dev/null | tail -1)"
+          --jq "[.[]|select((.user.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\")|not)|select((.author_association // \"\")|IN(\"OWNER\",\"MEMBER\",\"COLLABORATOR\"))|select(.body|test(\"@codex review\";\"i\"))]|last|.id // empty" 2>/dev/null | tail -1)"
   thumbs=0
   if [ -n "$reqid" ]; then
-    thumbs="$(gh api "repos/$REPO/issues/comments/$reqid/reactions" \
-             --jq '[.[]|select(.content=="+1")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))]|length' 2>/dev/null)"
+    thumbs="$(gh api "repos/$REPO/issues/comments/$reqid/reactions" --paginate --slurp 2>/dev/null | jq -r '[.[].[]|select(.content=="+1")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))]|length' 2>/dev/null)"
   fi
   # Codex's 👍 lands on the PR ISSUE, never on the request comment (verified
   # FE PR#524 + PR#528, 2026-09-14: zero codex reactions on four request
@@ -215,8 +215,7 @@ report() {
   # "predates the latest request"). Codex re-creates the 👍 per round, so
   # created_at > reqts is the round-after-request test.
   local prthumbs
-  prthumbs="$(gh api "repos/$REPO/issues/$PR/reactions" \
-             --jq "[.[]|select(.content==\"+1\")|select((.user.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\"))|select(.created_at > \"$reqts\")]|length" 2>/dev/null)"
+  prthumbs="$(gh api "repos/$REPO/issues/$PR/reactions" --paginate --slurp 2>/dev/null | jq -r "[.[].[]|select(.content==\"+1\")|select((.user.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\"))|select(.created_at > \"$reqts\")]|length" 2>/dev/null)"
   POSTREQ=0
   [ "${pq1:-0}" -gt 0 ] && POSTREQ=1
   [ "${pq2:-0}" -gt 0 ] && POSTREQ=1
@@ -240,8 +239,7 @@ report() {
   sel='select(.name!="Vercel")'
   [ -n "$SINCE" ] && sel="$sel|select(.created_at >= \"$SINCE\")"  # runs from BEFORE the triggering action do not count; >= keeps a run minted in the same second as `t` (PR #23 R2)
   read_runs() {
-    gh api "repos/$REPO/actions/runs?head_sha=$head&event=pull_request" \
-      --jq "[.workflow_runs[]|$sel]|group_by(.workflow_id)|map(sort_by(.created_at)|last)|.[]|\"\\(.path|split(\"@\")[0])=\\(.status):\\(.conclusion)\"" 2>/dev/null | sort -u
+    gh api "repos/$REPO/actions/runs?head_sha=$head&event=pull_request&per_page=100" --paginate --slurp 2>/dev/null | jq -r "[.[].workflow_runs[]|$sel]|group_by(.workflow_id)|map(sort_by(.created_at)|last)|.[]|\"\\(.path|split(\"@\")[0])=\\(.status):\\(.conclusion)\"" 2>/dev/null | sort -u
   }
   runs="$(read_runs)"
   sleep 5
@@ -257,6 +255,8 @@ report() {
   say "  CI on head         : ${a:-<none>}"
 
   CI_OK=0; CI_NA=0
+  local green_pattern="=completed:success$"
+  [ "$IS_DRAFT" = true ] && green_pattern="=completed:(success|skipped)$"
   if [ -z "$a" ]; then
     # Absent CI is not green — unless the repo has NO workflows at all (netpilot-skills): then the
     # CI half is the repo's local check recorded in the PR body (merge.md, "A repo with NO CI
@@ -280,8 +280,8 @@ report() {
     fi
   elif [ "$a" != "$b" ]; then
     CI_REASON="CI state flapped between two reads — not settled"
-  elif echo "$a" | grep -qvE "=completed:success$"; then
-    CI_REASON="CI not green: $(echo "$a" | grep -vE '=completed:success$' | tr '\n' ' ')"
+  elif echo "$a" | grep -qvE "$green_pattern"; then
+    CI_REASON="CI not green: $(echo "$a" | grep -vE "$green_pattern" | tr '\n' ' ')"
   elif [ "$IS_DRAFT" != "true" ] && ! echo "$a" | grep -qvE ":skipped$"; then
     # every run on this head is a draft-era skipped run: the flip minted no real run (merge.md, CI never ran)
     CI_REASON="only skipped (draft-era) runs on this head — no real CI run yet (merge.md, CI never ran)"
@@ -328,21 +328,24 @@ escalate_if_no_ack() {
   # (paid) re-request every escalation window.
   local reqts="$1" acks
   acks="$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
-          --jq "[.[]|select((.user.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\")|not)|select(.body|test(\"@codex review\";\"i\"))]|last|.id // empty" 2>/dev/null | tail -1)"
+          --jq "[.[]|select((.user.login // \"\")|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\")|not)|select((.author_association // \"\")|IN(\"OWNER\",\"MEMBER\",\"COLLABORATOR\"))|select(.body|test(\"@codex review\";\"i\"))]|last|.id // empty" 2>/dev/null | tail -1)"
   [ -n "$acks" ] || return 0
   local eyes
-  eyes="$(gh api "repos/$REPO/issues/comments/$acks/reactions" --jq '[.[]|select(.content=="eyes")]|length' 2>/dev/null)"
+  eyes="$(gh api "repos/$REPO/issues/comments/$acks/reactions" --paginate --slurp 2>/dev/null | jq -r '[.[].[]|select(.content=="eyes")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))]|length' 2>/dev/null)"
   if [ "${eyes:-0}" = "0" ]; then
     echo "  no 👀 on the request after 5min — RE-REQUESTING (review.md, The loop)"
     if env -u GH_TOKEN -u GITHUB_TOKEN gh pr comment "$PR" -R "$REPO" --body "@codex review" >/dev/null 2>&1 \
       || gh pr comment "$PR" -R "$REPO" --body "@codex review" >/dev/null 2>&1; then
       # the replacement request must be OBSERVABLE before it bounds later reads, else a verdict that landed in the
       # window could count as post-request activity on the next poll (#27 R5 P1) — same check as the post-flip path
+      PF_REREQ=1; PF_T=$(date +%s)   # one retry total; an unanswered replacement holds after 15 min
       local old_ts="$REQTS" i
       for i in 1 2 3 4 5 6; do REQTS="$(req_ts)"; [ -n "$REQTS" ] && [[ "$REQTS" > "$old_ts" ]] && break; sleep 10; done
       if ! { [ -n "$REQTS" ] && [[ "$REQTS" > "$old_ts" ]]; }; then
         echo "BROKEN: the re-request was posted but is not visible after 60 s — trust nothing"; [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL BROKEN"; exit 2
       fi
+    else
+      echo "BROKEN: could not post the no-ack re-request (auth? rate limit?) — trust nothing"; [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL BROKEN"; exit 2
     fi
   fi
 }
@@ -372,7 +375,7 @@ if ! REQTS="$(req_ts)"; then
   echo "BROKEN: cannot read latest review request or ready-for-review timeline"
   exit 2
 fi
-[ -n "$REQTS" ] || REQTS="1970-01-01T00:00:00Z"
+[ -n "$REQTS" ] || { echo "BROKEN: missing review request boundary — request @codex review before gating"; exit 2; }
 
 if [ "$WATCH" = 0 ]; then
   report "$HEAD" "$REQTS"; decide; exit $?
@@ -429,12 +432,17 @@ while :; do
   ELAPSED=$(( $(date +%s) - START ))
   # A loop counter is not a clock (deploy.md) — escalate on real elapsed.
   [ "$PF_REREQ" = 0 ] && [ "$ELAPSED" -ge 300 ] && [ $(( ELAPSED % 300 )) -lt 60 ] && escalate_if_no_ack "$REQTS"   # silent once the #22 re-request is out
+  if [ "$PF_REREQ" = 1 ] && [ $(( $(date +%s) - PF_T )) -ge 900 ]; then
+    echo "REVIEW UNANSWERED — two requests, no answer on head ${HEAD:0:10}: HOLD and report to Lin; never merge past an unanswered request (#22)"
+    [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL NOT READY (review unanswered)"
+    exit 1
+  fi
   # Lin's #22 ruling (2026-09-28): a NON-draft head that already carries a verdict, whose latest request
   # sits unanswered ~15 min, gets ONE automatic re-request; unanswered ~15 min later → report, never merge.
   if [ "$IS_DRAFT" != "true" ] && [ "$VERDICT_ON_HEAD" = 1 ] && [ "$POSTREQ" != 1 ]; then
     # only the PICKED-UP-but-unanswered shape (👀 on the latest request); no 👀 is escalate_if_no_ack's case
-    PF_REQID="$(gh api "repos/$REPO/issues/$PR/comments" --paginate --jq '[.[]|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]")|not)|select(.body|test("@codex review";"i"))]|last|.id // empty' 2>/dev/null | tail -1)"
-    PF_EYES=0; [ -n "$PF_REQID" ] && PF_EYES="$(gh api "repos/$REPO/issues/comments/$PF_REQID/reactions" --jq '[.[]|select(.content=="eyes")]|length' 2>/dev/null)"
+    PF_REQID="$(gh api "repos/$REPO/issues/$PR/comments" --paginate --jq '[.[]|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]")|not)|select((.author_association // "")|IN("OWNER","MEMBER","COLLABORATOR"))|select(.body|test("@codex review";"i"))]|last|.id // empty' 2>/dev/null | tail -1)"
+    PF_EYES=0; [ -n "$PF_REQID" ] && PF_EYES="$(gh api "repos/$REPO/issues/comments/$PF_REQID/reactions" --paginate --slurp 2>/dev/null | jq -r '[.[].[]|select(.content=="eyes")|select((.user.login // "")|IN("chatgpt-codex-connector","chatgpt-codex-connector[bot]"))]|length' 2>/dev/null)"
     PF_SINCE=$(( $(date +%s) - $(python3 -c "import sys,datetime;print(int(datetime.datetime.fromisoformat(sys.argv[1].replace('Z','+00:00')).timestamp()))" "$REQTS" 2>/dev/null || echo 0) ))
     if [ "${PF_EYES:-0}" -gt 0 ] && [ "$PF_REREQ" = 0 ] && [ "$PF_SINCE" -ge 900 ]; then
       echo "  post-flip request unanswered for 15 min on an already-verdicted head — ONE automatic re-request (#22)"
@@ -450,10 +458,6 @@ while :; do
       else
         echo "BROKEN: could not post the post-flip re-request (auth? rate limit?) — trust nothing"; [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL BROKEN"; exit 2
       fi
-    elif [ "$PF_REREQ" = 1 ] && [ $(( $(date +%s) - PF_T )) -ge 900 ]; then
-      echo "POST-FLIP UNANSWERED — two requests, no answer on head ${HEAD:0:10}: report to Lin with the head verdict; never merge past an unanswered request (#22)"
-      [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL NOT READY (post-flip unanswered)"
-      exit 1
     fi
   fi
   if [ "$ELAPSED" -ge 4500 ]; then

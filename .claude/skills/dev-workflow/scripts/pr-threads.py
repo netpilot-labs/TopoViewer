@@ -40,13 +40,19 @@ def main(argv):
         raise SystemExit(__doc__)
     repo, pr = args[0], int(args[1])
     sha = args[2] if len(args) > 2 else ""
-    replies = json.load(open(args[3])) if len(args) > 3 else {}
+    replies = {}
+    if len(args) > 3:
+        with open(args[3]) as reply_file:
+            replies = json.load(reply_file)
     owner, name = repo.split("/", 1)
 
     q = """query($owner:String!,$name:String!,$pr:Int!){ repository(owner:$owner,name:$name){
-      pullRequest(number:$pr){ reviewThreads(last:100){ nodes{ id isResolved
+      pullRequest(number:$pr){ reviewThreads(last:100){ totalCount nodes{ id isResolved
         comments(first:1){ nodes{ databaseId path line originalLine } } } } } } }"""
-    nodes = gql(q, {"owner": owner, "name": name, "pr": pr})["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
+    threads = gql(q, {"owner": owner, "name": name, "pr": pr})["data"]["repository"]["pullRequest"]["reviewThreads"]
+    nodes = threads["nodes"]
+    if threads.get("totalCount") != len(nodes):
+        raise SystemExit("review thread window is incomplete; no replies or resolutions were posted")
     by_comment = {str(t["comments"]["nodes"][0]["databaseId"]): t for t in nodes if t["comments"]["nodes"]}
 
     if dry:

@@ -75,7 +75,9 @@ for id in $ids; do
   echo "ci-wait: run $id concluded ${st#completed/}"
   gh api "repos/$repo/actions/runs/$id/jobs" --jq '.jobs[]|"  job \(.name): \(.conclusion)"'
 done
-"$(dirname "$0")/pr-gates.sh" "$pr" --repo "$repo"; rc=$?
+gate_args=("$pr" --repo "$repo")
+[ -n "$since" ] && gate_args+=(--since "$since")
+"$(dirname "$0")/pr-gates.sh" "${gate_args[@]}"; rc=$?
 # The ONLY line a caller may read for the result. A task log can carry an earlier stage's
 # "READY" (a pr-gates --watch that ran before the flip): grepping READY merged BE#743 with
 # its unit-test job still running (2026-09-09). Read this marker, nothing else.

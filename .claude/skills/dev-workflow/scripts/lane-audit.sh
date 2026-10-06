@@ -51,8 +51,9 @@ for n in "${issues[@]}"; do lbl="#$n"
   while IFS=$'\t' read -r pn pstate draft branch sha via prepo; do
     [ "$sha" = - ] && sha=""; po=${prepo%%/*}; pname=${prepo##*/}; hf="$dir/${prepo/\//__}/holder"   # every check in the PR's OWN repo
     pcol="#$pn $pstate"; [ "$prepo" != "$repo" ] && pcol="$prepo#$pn $pstate"; [ "$draft" = true ] && pcol="$pcol/draft"; [ "$via" = mention ] && pcol="${pcol} (mention)"; [ "$pstate" = OPEN ] && open=1   # CLOSED = superseded, not a leftover
-    wt="$ws/worktrees/$pname/$branch"; if [ -d "$wt" ]; then wtcol=PRESENT; open=1; else wtcol=none; fi
-    co="$ws/$pname"; [ "$pname" = netpilot-skills ] && co="$ws/.claude/skills"   # the main checkout holds the local branch
+    folder=$pname; [ "$folder" = TopoViewer ] && folder=topoViewer   # GitHub casing differs from the local checkout/worktree alias
+    wt="$ws/worktrees/$folder/$branch"; if [ -d "$wt" ]; then wtcol=PRESENT; open=1; else wtcol=none; fi
+    co="$ws/$folder"; [ "$pname" = netpilot-skills ] && co="$ws/.claude/skills"   # the main checkout holds the local branch
     if [ -d "$co/.git" ] && git -C "$co" show-ref --verify --quiet "refs/heads/$branch"; then lcol=EXISTS; open=1; else lcol=none; fi
     # a GraphQL ref lookup: slashes in a branch name stay inside the argument (a REST path would split on them); null = gone,
     # a failed call = UNREADABLE (never "gone")

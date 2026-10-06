@@ -76,17 +76,17 @@ else
   # Every REQUIRED workflow (all but Vercel) must have its LATEST run green and newer than main's
   # tip — one fresh run of one workflow never vouches for the others (PR #23 R3).
   runs_json=$(gh api "repos/$REPO/actions/runs?head_sha=$HEAD&event=pull_request&per_page=50" \
-              --jq '[.workflow_runs[]|select(.name!="Vercel")]|group_by(.name)|map(sort_by(.created_at)|last)' 2>/dev/null)
+              --paginate --slurp 2>/dev/null | jq -c '[.[].workflow_runs[]|select(.name!="Vercel")]|group_by(.workflow_id // (.path|split("@")[0]))|map(sort_by(.created_at,.id)|last)' 2>/dev/null)
   [ -n "$runs_json" ] || final "BROKEN cannot list runs on the head" 2
   total=$(printf '%s' "$runs_json" | python3 -c 'import json,sys; r=json.load(sys.stdin); print(len(r))')
-  okc=$(printf '%s' "$runs_json" | python3 -c 'import json,sys; r=json.load(sys.stdin); print(sum(1 for x in r if x.get("conclusion")=="success"))')
-  RUN_DATE=$(printf '%s' "$runs_json" | python3 -c 'import json,sys; r=json.load(sys.stdin); d=[x["created_at"] for x in r if x.get("conclusion")=="success"]; print(min(d) if d else "")')
+  okc=$(printf '%s' "$runs_json" | python3 -c 'import json,sys; r=json.load(sys.stdin); print(sum(1 for x in r if x.get("status")=="completed" and x.get("conclusion")=="success"))')
+  RUN_DATE=$(printf '%s' "$runs_json" | python3 -c 'import json,sys; r=json.load(sys.stdin); d=[x["created_at"] for x in r if x.get("status")=="completed" and x.get("conclusion")=="success"]; print(min(d) if d else "")')
   [ "${total:-0}" -gt 0 ] && [ "$okc" = "$total" ] && [ -n "$RUN_DATE" ] || final "NOT MERGED base is $BEHIND commit(s) behind $BASE and not every required workflow's latest run is green ($okc/$total) — rebase and re-verify" 1
   # The required SET is independent of this head's run list (required-workflows.sh): a required workflow
   # with no run on the current head is an event miss this head's run list cannot show (PR #23 R4).
   required=$("$SK/required-workflows.sh" "$REPO" "$PR") || final "BROKEN cannot read the required-workflow set — trust nothing" 2
-  expected_json=$(printf '%s\n' "$required" | python3 -c 'import json,sys; print(json.dumps(sorted({l.rstrip("\n").split("\t",1)[1] for l in sys.stdin if "\t" in l})))')
-  missing=$(printf '%s\n%s' "$runs_json" "$expected_json" | python3 -c 'import json,sys; a,b=sys.stdin.read().split("\n",1); have={x["name"] for x in json.loads(a)}; exp=json.loads(b) if b.strip() else []; print(", ".join(w for w in exp if w not in have))')
+  expected_json=$(printf '%s\n' "$required" | python3 -c 'import json,sys; print(json.dumps(sorted({l.rstrip("\n").split("\t",1)[0] for l in sys.stdin if "\t" in l})))')
+  missing=$(printf '%s\n%s' "$runs_json" "$expected_json" | python3 -c 'import json,sys; a,b=sys.stdin.read().split("\n",1); have={x["path"].split("@",1)[0] for x in json.loads(a)}; exp=json.loads(b) if b.strip() else []; print(", ".join(w for w in exp if w not in have))')
   [ -z "$missing" ] || final "NOT MERGED base is $BEHIND behind and required workflow(s) minted no run on this head: $missing — close/reopen (merge.md, CI never ran), then re-verify" 1
   to_epoch() { python3 -c "import sys,datetime;print(int(datetime.datetime.fromisoformat(sys.argv[1].replace('Z','+00:00')).timestamp()))" "$1" 2>/dev/null; }
   run_s=$(to_epoch "$RUN_DATE"); main_s=$(to_epoch "$MAIN_DATE")

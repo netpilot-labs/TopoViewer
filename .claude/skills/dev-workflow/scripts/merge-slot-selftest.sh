@@ -22,6 +22,11 @@ tok=$("$S" acquire "$R" 7);                 t "acquire takes a free slot" state 
 t "a second acquire is refused"             bash -c "! '$S' acquire $R 8"
 "$S" release "$R" "$tok";                   t "release (not merged) frees it" free
 
+tok=$("$S" acquire "$R" 7); "$S" sha "$R" "$tok" "$SHA"
+"$S" settle "$R" "$SHA" clean-skip >/dev/null; t "skipped Sentry keeps the initial slot held" state "7 SENTRY-SKIPPED"
+t "a second merge cannot bypass skipped Sentry" bash -c "! '$S' acquire $R 8"
+"$S" settle "$R" "$SHA" clean >/dev/null; t "a full clean re-run clears skipped Sentry" free
+
 hold_broken >/dev/null;                     t "a BROKEN watch keeps the slot held" state "7 BROKEN"
 t "acquire without the ACK is refused"      bash -c "! '$S' acquire $R 8"
 tok=$(MERGE_SLOT_ACK=7 "$S" acquire "$R" 8 2>/dev/null); t "acquire with the ACK takes it" state "8 inflight"
@@ -41,7 +46,8 @@ STUB_WF=2 STUB_RUNS="Tests in_progress/-" "$PM" containerlab-mcp "$SHA" >/dev/nu
 STUB_WF=2 STUB_RUNS="Tests completed/failure, Lint completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a FAILED main run keeps it" state "7 BROKEN" "$C"
 STUB_WF=2 STUB_RUNS="" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… no run yet keeps it" state "7 BROKEN" "$C"
 STUB_WF=2 STUB_RUNS="Tests completed/success" STUB_DATE=$(date -u +%FT%TZ) "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a green run on a merge seconds old keeps it (a second workflow's run may not exist yet)" state "7 BROKEN" "$C"
-out=$(STUB_WF=2 STUB_RUNS="Tests completed/success, Docs completed/skipped" "$PM" containerlab-mcp "$SHA" 2>&1); rc=$?
+STUB_WF=2 STUB_RUNS="Tests completed/success, Docs completed/skipped" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a skipped workflow does not verify main or clear its hold" state "7 BROKEN" "$C"
+out=$(STUB_WF=2 STUB_RUNS="Tests completed/success, Docs completed/success" "$PM" containerlab-mcp "$SHA" 2>&1); rc=$?
 t "… exits 0"                                        [ $rc -eq 0 ]
 t "… says there is no deploy on merge"               grep -q 'no deploy on merge' <<< "$out"
 t "… green main runs clear the stale hold for that sha" free "$C"
