@@ -80,11 +80,11 @@ merge by hand in one line merged stale bases three times (FE PR#247, #276, BE PR
   valid closing keyword** (`Fixes BE#944` links/closes nothing): the issue stays OPEN after merge. Verify
   each linked issue actually closed and close by hand if the auto-close missed (BE#944/#945, 2026-10-01).
 
-## Migrations at merge — the agent's own in default mode since 2026-10-04 (SKILL.md Delegation modes)
+## Migrations at merge — the agent's own in default mode since 2026-10-04 (authority.md Delegation modes)
 Additive/data migrations: apply to Neon BEFORE merge (new code needs the schema). DROP migrations on tables the deployed code
 still touches: merge → deploy → verify → run the docstring's pre-apply check → apply (BE PR#570).
 
 ## Stacked PRs
-Retarget the child to the repository’s default branch BEFORE squash-merging its base (`gh pr edit <child> --base main`), then rebase the child
-`--onto origin/main <old-base-tip>` — merging the base with `--delete-branch` auto-closes the child unrecoverably
+Retarget the child to the repository’s default branch BEFORE squash-merging its base (`gh pr edit <child> --base <default-branch>`), then rebase the child
+`--onto origin/<default-branch> <old-base-tip>` — merging the base with `--delete-branch` auto-closes the child unrecoverably
 (clab PR#193→#195).

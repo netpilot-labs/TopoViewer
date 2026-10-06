@@ -35,29 +35,29 @@ echo "ci-wait: $repo#$pr head=$head since=${since:-newest}"
 # found (2026-09-09, clab#197: the first run finished while Tests was still in progress).
 appear=$(( $(date +%s) + APPEAR_MIN*60 )); ids=""
 while [ -z "$ids" ]; do
-  ids=$(gh api "repos/$repo/actions/runs?head_sha=$head&event=pull_request&per_page=30" \
+  ids=$(gh api "repos/$repo/actions/runs?head_sha=$head&event=pull_request&per_page=100" --paginate \
        --jq ".workflow_runs | map(select(.created_at >= \"${since}\")) | map(select(.conclusion != \"skipped\")) | map(.id) | unique | .[]" | tr '\n' ' ')
   [ -n "$ids" ] && break
   [ $(date +%s) -gt $appear ] && { echo "ci-wait: no run minted in ${APPEAR_MIN} min — check mergeStateStatus, then close/reopen (merge.md, CI never ran)"; echo "ci-wait: FINAL BROKEN rc=3 (no run minted)"; exit 3; }
   sleep 15
 done
-# Workflows become API-visible at different times (PR #23 R5): keep discovering until two consecutive
-# reads agree or every required workflow (required-workflows.sh) has a run, bounded by DISCOVER_S.
+# Workflows become API-visible at different times (PR #23 R5). On a first cycle, the required
+# history only knows visible runs too: discover for the full DISCOVER_S window before settling.
 SK="$(cd "$(dirname "$0")" && pwd)"
-read_expected() { local req; req=$("$SK/required-workflows.sh" "$repo" "$pr") || return 2; printf '%s\n' "$req" | cut -f2 | sort -u; }
+read_expected() { local req; req=$("$SK/required-workflows.sh" "$repo" "$pr") || return 2; printf '%s\n' "$req" | cut -f1 | sort -u; }
 dstart=$(date +%s); prev=""
 while :; do
   # the required set is re-read every pass (a workflow added by this PR appears late) and fails CLOSED (#27 R4)
-  expected_names=$(read_expected) || { echo "ci-wait: cannot read the branch's run history — required set unknown"; echo "ci-wait: FINAL BROKEN rc=3 (history unreadable)"; exit 3; }
-  # ONE read gives both the ids and the distinct workflow names, so a break never leaves stale ids behind
-  lines=$(gh api "repos/$repo/actions/runs?head_sha=$head&event=pull_request&per_page=30" \
-          --jq ".workflow_runs[]|select(.created_at >= \"${since}\")|select(.conclusion != \"skipped\")|\"\\(.id) \\(.name)\"" 2>/dev/null)
+  expected_paths=$(read_expected) || { echo "ci-wait: cannot read the branch's run history — required set unknown"; echo "ci-wait: FINAL BROKEN rc=3 (history unreadable)"; exit 3; }
+  # ONE read gives both the ids and the distinct workflow paths, so a break never leaves stale ids behind
+  lines=$(gh api "repos/$repo/actions/runs?head_sha=$head&event=pull_request&per_page=100" --paginate \
+          --jq ".workflow_runs[]|select(.created_at >= \"${since}\")|select(.conclusion != \"skipped\")|\"\\(.id) \\(.path | split(\"@\")[0])\"" 2>/dev/null)
   cur=$(printf '%s\n' "$lines" | awk 'NF{print $1}' | sort -u | tr '\n' ' ')
-  have_names=$(printf '%s\n' "$lines" | awk 'NF{$1=""; sub(/^ /,""); print}' | sort -u)
+  have_paths=$(printf '%s\n' "$lines" | awk 'NF{$1=""; sub(/^ /,""); print}' | sort -u)
   [ -n "$cur" ] && ids="$cur"
-  # settle only on two CONSECUTIVE agreeing reads whose NAMES cover every expected workflow (#27 R2, R3)
-  missing=$(comm -23 <(printf '%s\n' "$expected_names" | grep -v '^$') <(printf '%s\n' "$have_names" | grep -v '^$'))
-  if [ -n "$cur" ] && [ "$cur" = "$prev" ] && [ -z "$missing" ]; then break; fi
+  # settle only on two CONSECUTIVE agreeing reads whose PATHS cover every expected workflow (#27 R2, R3)
+  missing=$(comm -23 <(printf '%s\n' "$expected_paths" | grep -v '^$') <(printf '%s\n' "$have_paths" | grep -v '^$'))
+  if [ $(( $(date +%s) - dstart )) -ge $DISCOVER_S ] && [ -n "$cur" ] && [ "$cur" = "$prev" ] && [ -z "$missing" ]; then break; fi
   prev="$cur"
   if [ $(( $(date +%s) - dstart )) -ge $DISCOVER_S ]; then echo "ci-wait: discovery bound reached; still no run for:$(printf '%s\n' "$missing" | sed 's/^/ [/; s/$/]/' | tr -d '\n') — waiting on the visible ones"; break; fi
   sleep 15

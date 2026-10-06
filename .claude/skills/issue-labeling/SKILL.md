@@ -113,13 +113,13 @@ loop-opened PR. An unlabeled bot PR is nobody's: BE#507 sat 22 days green and un
     -f query='mutation($p:ID!,$c:ID!){addSubIssue(input:{issueId:$p,subIssueId:$c}){issue{number}}}' \
     -f p="<parent-node-id>" -f c="<child-node-id>"
   ```
-  Get a node id with `gh issue view <n> -R lz-networks/<repo> --json id -q .id`. Cap: 100 sub-issues/parent.
+  Get a node id with `gh issue view <n> -R <owner>/<repo> --json id -q .id`. Cap: 100 sub-issues/parent.
 
 ## Label creation & sync (the taxonomy is closed)
 
 - **Agents never create, rename, or delete labels.** Only Lin changes the taxonomy.
 - **NetPilot-2-Backend is canonical.** Propagate any change with
-  `gh label clone lz-networks/NetPilot-2-Backend -R lz-networks/<repo> --force`.
+  `gh label clone lz-networks/NetPilot-2-Backend -R <owner>/<repo> --force`.
 - `lz-networks` is a personal account (no Org Issue Types / default labels), so **every new
   agent-worked repo needs that clone command re-run at creation.** NetPilot-2-Scheduler has no GitHub
   repo — skip it.

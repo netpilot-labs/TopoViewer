@@ -38,13 +38,16 @@ main() {
 set -uo pipefail
 # Repo → GitHub owner (the fleet spans two owners; a wrong owner reads as "no alerts, no PRs,
 # no dashboard" — containerlab-mcp was invisible to the pass all night, 2026-09-09).
-owner_of() { case "$1" in containerlab-mcp|topoViewer) echo netpilot-labs;; *) echo "${OWNER:-lz-networks}";; esac; }
+owner_of() { case "$1" in containerlab-mcp|TopoViewer) echo netpilot-labs;; *) echo "${OWNER:-lz-networks}";; esac; }
 DEPLOY_TIMEOUT_MIN=20; VERCEL_APPEAR_MIN=3; HEALTH_SAMPLES=5; HEALTH_MIN_OK=4; PARSE_TOLERANCE=3
-R=${1:?repo}; sha=${2:?merge sha (full 40-char)}; shift 2; OWNER=$(owner_of "$R")
+R=${1:?repo}; sha=${2:?merge sha (full 40-char)}; shift 2
+[ "$R" = topoViewer ] && R=TopoViewer
+OWNER=$(owner_of "$R")
 window=1h; skip_sentry=0
 while [ $# -gt 0 ]; do case "$1" in --sentry-window) window=$2; shift 2;; --skip-sentry) skip_sentry=1; shift;; *) echo "unknown arg $1" >&2; exit 2;; esac; done
 [ ${#sha} -eq 40 ] || { echo "merge sha must be the full 40-char oid (gotchas: never hand-type one)" >&2; exit 2; }
-ws=${WORKSPACE:-$(cd "$(dirname "$0")/../../../.." && pwd)}; [ -d "$ws/$R/.git" ] || ws=$(cd "$ws/.." && pwd)
+folder=$R; [ "$R" = TopoViewer ] && folder=topoViewer
+ws=${WORKSPACE:-$(cd "$(dirname "$0")/../../../.." && pwd)}; [ -d "$ws/$folder/.git" ] || ws=$(cd "$ws/.." && pwd)
 red=0; broken=0; review=0; ci_only=""; outage=0
 say() { printf '%s %s\n' "$(date -u +%H:%M:%SZ)" "$*"; }
 SLOT="$(cd "$(dirname "$0")" && pwd)/merge-slot.sh"
@@ -56,7 +59,7 @@ SLOT="$(cd "$(dirname "$0")" && pwd)/merge-slot.sh"
 # leaves it held (Codex, skills PR#60). No other holder is touched.
 case "$R" in
   NetPilot-2-Backend|NetPilot-2-LB|NetPilot-2-Frontend|netpilot-marketing) ;;
-  containerlab-mcp|netpilot-skills|netpilot-probe-lab|netpilot-devops|netpilot-dev|netpilot-lead-desk|netpilot-support-desk|netpilot-marketing-monitor|3rd-party-apps|topoViewer)
+  containerlab-mcp|netpilot-skills|netpilot-probe-lab|netpilot-devops|netpilot-dev|netpilot-lead-desk|netpilot-support-desk|netpilot-marketing-monitor|3rd-party-apps|TopoViewer)
     runs=$(gh api "repos/$OWNER/$R/actions/runs?head_sha=$sha&event=push" --jq '[.workflow_runs[]|"\(.name) \(.status)/\(.conclusion // "-")"]|join(", ")') || runs="UNREADABLE"
     wf=$(gh api "repos/$OWNER/$R/actions/workflows" --jq .total_count) || wf="UNREADABLE"
     # a push run is minted within seconds of the merge; before RUNS_APPEAR_S a green list may still be missing a workflow
@@ -65,7 +68,7 @@ case "$R" in
     if [ "$wf" = 0 ]; then verified=1; runs="none (the repo has no workflows)"
     elif [ -n "$runs" ] && [ "$runs" != UNREADABLE ] && [[ "$age" =~ ^[0-9]+$ ]] && [ "$age" -ge $RUNS_APPEAR_S ] \
       && ! printf '%s\n' "$runs" | tr ',' '\n' | grep -qvE ' completed/(success|skipped)$'; then verified=1; fi
-    say "RESULT: no deploy on merge for $R — nothing to watch. main push run(s) for ${sha:0:8}: ${runs:-none yet} (read once: follow any that is not completed/success); the repo's own post-merge step is in deploy.md"
+    say "RESULT: no deploy on merge for $R — nothing to watch. default-branch push run(s) for ${sha:0:8}: ${runs:-none yet} (read once: follow any that is not completed/success); the repo's own post-merge step is in deploy.md"
     if [ $verified = 1 ]; then [ -x "$SLOT" ] && "$SLOT" settle "$OWNER/$R" "$sha" clean
     else [ -x "$SLOT" ] && "$SLOT" peek "$OWNER/$R" | grep -q . && say "main is not verified for ${sha:0:8}: a merge-slot hold kept for this sha stays — re-run this once the run is green"; fi
     exit 0;;
@@ -101,12 +104,13 @@ try: d=json.loads(sys.stdin.read(),strict=False)
 except Exception: print("PARSE"); sys.exit()
 for x in d:
     if (x.get("meta") or {}).get("commitHash","").startswith(sha): print(x.get("status","?")); sys.exit()
-print("NONE")' "$sha")
+print("NONE")' "$sha") || st=PARSE
+    [ "$st" != PARSE ] && bad=0
     case "$st" in
       SUCCESS) say "railway $svc: SUCCESS for ${sha:0:8}"; return;;
       FAILED|CRASHED) say "RED: railway $svc deployment $st for ${sha:0:8}"; red=1; return;;
       NEEDS_APPROVAL) say "BROKEN: railway deployment NEEDS_APPROVAL (dev-workflow/deploy.md has the GraphQL approve)"; broken=1; return;;
-      PARSE) bad=$((bad+1)); if [ $bad -ge $PARSE_TOLERANCE ]; then say "BROKEN: railway CLI output unparseable $bad× in a row — unauthenticated or CLI outage; run it in the foreground (dev-workflow/deploy.md)"; broken=1; return; fi; say "railway $svc: transient unparseable response ($bad/$PARSE_TOLERANCE) …"; sleep 20;;
+      PARSE) bad=$((bad+1)); if [ $bad -ge $PARSE_TOLERANCE ]; then say "BROKEN: railway CLI output unparseable ${bad}× in a row — unauthenticated or CLI outage; run it in the foreground (dev-workflow/deploy.md)"; broken=1; return; fi; say "railway $svc: transient unparseable response ($bad/$PARSE_TOLERANCE) …"; sleep 20;;
       *) [ $(date +%s) -gt $deadline ] && { say "BROKEN: railway $svc still $st after ${DEPLOY_TIMEOUT_MIN} min"; broken=1; return; }; say "railway $svc: $st …"; sleep 30;;
     esac
   done
@@ -123,8 +127,18 @@ main_run_wait() {  # backend: the push run on main for this sha
     case "$st" in completed/*) break;; esac
     [ $(date +%s) -gt $deadline ] && { say "BROKEN: main run $id still $st"; broken=1; return; }; sleep 30
   done
-  gh run view "$id" -R "$OWNER/$R" --json jobs --jq '.jobs[]|"  job \(.name): \(.conclusion)"'
-  if gh run view "$id" -R "$OWNER/$R" --json jobs --jq '[.jobs[]|select(.conclusion=="failure" or .conclusion=="cancelled" or .conclusion=="timed_out")]|length' | grep -qv '^0$'; then
+  case "$st" in
+    completed/success) ;;
+    completed/failure|completed/cancelled|completed/timed_out)
+      say "RED: main run $id ended $st"; [ $red = 0 ] && ci_only=$id; red=1; return;;
+    *) say "BROKEN: main run $id ended $st — success was not verified"; broken=1; return;;
+  esac
+  local jobs badjobs
+  jobs=$(gh run view "$id" -R "$OWNER/$R" --json jobs --jq '.jobs[]|"  job \(.name): \(.conclusion)"') || { say "BROKEN: cannot read main run $id jobs"; broken=1; return; }
+  printf '%s\n' "$jobs"
+  badjobs=$(gh run view "$id" -R "$OWNER/$R" --json jobs --jq '[.jobs[]|select(.conclusion!="success" and .conclusion!="skipped")]|length') || { say "BROKEN: cannot verify main run $id job conclusions"; broken=1; return; }
+  [[ "$badjobs" =~ ^[0-9]+$ ]] || { say "BROKEN: invalid main run $id job conclusions"; broken=1; return; }
+  if [ "$badjobs" -ne 0 ]; then
     say "RED: main run $id has a failed job — the real-Clerk job runs only here (mechanics §8)"; [ $red = 0 ] && ci_only=$id; red=1
   else say "main run $id: all jobs green/skipped"; fi
 }
@@ -152,10 +166,11 @@ vercel_wait() {  # route url [version-url]
     # and it ignores query strings on static files, so retry rather than cache-bust.
     local v="" i
     for i in 1 2 3 4 5 6; do
-      v=$(curl -s -m 15 -H "Cache-Control: no-cache" "$2" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))' 2>/dev/null)
+      v=$(curl -fsS -m 15 -H "Cache-Control: no-cache" "$2" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))' 2>/dev/null) || v=""
       [ "$v" = "$sha" ] && break; sleep 10
     done
-    say "version stamp $v"; [ "$v" = "$sha" ] || say "NOTE: version.json stamps ${v:0:8}, not ${sha:0:8} after 60 s — a newer main deploy may have superseded (fine) or the build is stale (check)"
+    if [ "$v" = "$sha" ]; then say "version stamp $v"
+    else say "BROKEN: version.json did not prove ${sha:0:8} live after six reads (last stamp: ${v:-unreadable}) — verify the deployment before releasing the merge slot"; broken=1; fi
   fi
 }
 

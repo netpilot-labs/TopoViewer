@@ -23,7 +23,7 @@ canonical checkout. Local setup does not commit, change branches, merge, or push
 wrapper. Profile inference uses installed metadata or the Git origin, so a worktree’s branch
 folder name does not select the wrong profile. Pass `--profile` to the Python CLI for an
 explicit selection. Exit 0 means current; 10 means changes/drift; 2 means a conflict or invalid
-configuration. `--check` never writes.
+configuration. `--check` never writes; `sync-all` skips repository profiles without an installed Git checkout.
 
 ## Local edits and recovery
 

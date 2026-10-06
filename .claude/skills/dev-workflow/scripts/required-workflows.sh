@@ -20,14 +20,15 @@ IFS=$'\t' read -r created headref headrepo <<< "$meta"
 # Joined on workflow ID, never on the run's path: the runs API may suffix it (`.github/workflows/x.yml@main`) and an
 # exact path match would then drop every run and print an empty set with exit 0 (Codex, PR#72 post-flip). The path
 # printed is the workflows API's own, unsuffixed — pr-gates.sh compares it with the PR's file list.
-active="$(gh api "repos/$REPO/actions/workflows" --paginate --jq '.workflows[]|select(.state=="active")|"\(.id)\t\(.path)"' 2>/dev/null)" || exit 2
+active="$(gh api "repos/$REPO/actions/workflows" --paginate --jq '.workflows[]|select(.state=="active")|"\(.id)\t\(.path)\t\(.name)"' 2>/dev/null)" || exit 2
 # >= keeps a run minted in the same second the PR opened; both stamps are GitHub's second-precision UTC.
 # The head-repository match keeps a fork PR that shares the branch name out of the set (Codex, PR#72).
-hist="$(gh api "repos/$REPO/actions/runs?branch=$headref&event=pull_request&per_page=100" \
-        --jq "[.workflow_runs[]|select(.name!=\"Vercel\")|select(.created_at >= \"$created\")|select((.head_repository.full_name // \"\") == \"$headrepo\")|\"\(.workflow_id)\t\(.name)\"]|unique|.[]" 2>/dev/null)" || exit 2
-while IFS=$'\t' read -r id n; do
+hist="$(gh api "repos/$REPO/actions/runs?branch=$headref&event=pull_request&per_page=100" --paginate \
+        --jq "[.workflow_runs[]|select(.name!=\"Vercel\")|select(.created_at >= \"$created\")|select((.head_repository.full_name // \"\") == \"$headrepo\")|.workflow_id]|unique|.[]" 2>/dev/null)" || exit 2
+hist="$(printf '%s\n' "$hist" | sort -u)"   # --jq deduplicates each page; collapse duplicate workflow IDs across pages, regardless of historical display names.
+while IFS= read -r id; do
   [[ "$id" =~ ^[0-9]+$ ]] || { [ -z "$id" ] && continue; exit 2; }   # a run with no numeric workflow id: set unknown
-  p="$(printf '%s\n' "$active" | awk -F'\t' -v id="$id" '$1==id{print $2; exit}')"
-  [ -n "$p" ] && printf '%s\t%s\n' "$p" "$n"
+  line="$(printf '%s\n' "$active" | awk -F'\t' -v id="$id" '$1==id{print $2 "\t" $3; exit}')"
+  [ -n "$line" ] && printf '%s\n' "$line"
 done <<< "$hist"
 exit 0

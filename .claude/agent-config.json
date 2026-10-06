@@ -23,14 +23,20 @@
     ".claude/skills/agent-configuration.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "254f32b3f8a6077399bb40ca7b3d09190c1b9ee081b27ae8e53bd5af9fc03306",
+      "sha256": "784403441f2724f2ae4fb882cad38be6f06f84027b7fd63743c02ace4e653a51",
       "source": "agent-configuration.md"
     },
     ".claude/skills/dev-workflow/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "533c6cc487b6f1d2da25db34af2bd59f82db8d1c021bd6918f6a3a14779e2cb5",
+      "sha256": "6876e4297d101cf3575437facf5b7e1e56b6062735ca30d1a910181e86f25421",
       "source": "dev-workflow/SKILL.md"
+    },
+    ".claude/skills/dev-workflow/authority.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "c3f8476c0cc63bffbff49bedc65b9be9535e0954149cb3af2878d8e23aab824d",
+      "source": "dev-workflow/authority.md"
     },
     ".claude/skills/dev-workflow/build.md": {
       "kind": "file",
@@ -59,13 +65,13 @@
     ".claude/skills/dev-workflow/merge.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "4311e33d26df15be5c60755f3d45c9ae623e256538d0bacc79ea00cc772ef719",
+      "sha256": "10158d8935ee13286eb28dccbd3d08879bbb2a531560bc0760d4bf6d80c441ad",
       "source": "dev-workflow/merge.md"
     },
     ".claude/skills/dev-workflow/residuals.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "c904a76f9a6c44e68e768f0d3f61b5ba71d5ae1c530728439e5af721089c06f6",
+      "sha256": "3084ad3303165c620d7cef7999f3f10ceb3bb54e0fde507630ab33ee14205fdd",
       "source": "dev-workflow/residuals.md"
     },
     ".claude/skills/dev-workflow/review.md": {
@@ -83,7 +89,7 @@
     ".claude/skills/dev-workflow/scripts/ci-wait.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "35a4d470b2023dc0dc7dcbb5b903d51c77490dfad702eab571fe5ea9213ad2a6",
+      "sha256": "37c2cc10d3404e5cfd56075cd8e1fadc01770ed9ed427a8b0bfc425e618e1e01",
       "source": "dev-workflow/scripts/ci-wait.sh"
     },
     ".claude/skills/dev-workflow/scripts/lane-audit.sh": {
@@ -125,13 +131,13 @@
     ".claude/skills/dev-workflow/scripts/postmerge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "8376577390cdbf8d301ae6acfbfb25c65a5bf3007b192655b4bd5d504466c914",
+      "sha256": "f60bedf52ed021c0aab75b156a7be8fbbe6c582aee819028ccfd81b83d32b22a",
       "source": "dev-workflow/scripts/postmerge.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-gates.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "5bdbc9549a93df0d4db45c52632ab84220c8cb505a86e8a510010e9f81bf5ffd",
+      "sha256": "5ca9876da5d2c53ccfe4e83851c4d497cecd38103550b28e46dc7b6f19e5444f",
       "source": "dev-workflow/scripts/pr-gates.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-threads.py": {
@@ -155,7 +161,7 @@
     ".claude/skills/dev-workflow/scripts/required-workflows.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "7b572027024760facfb06c4196a8a911b88d8c3b642bc922c8e46a2cc8ace9ae",
+      "sha256": "fad721bcb54abd50fa0d47de8d38ce6a346bb1446b3d4dae4f1ab57d96532a40",
       "source": "dev-workflow/scripts/required-workflows.sh"
     },
     ".claude/skills/dev-workflow/scripts/with-db-lock.sh": {
@@ -185,7 +191,7 @@
     ".claude/skills/issue-labeling/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "362a66a7437ecc2adbf8daf5bebf305981c8da1d699bd9a883715980254ce853",
+      "sha256": "28ef6cb76f1e569868a3a1472de77e1d6424c272d613a65addaaf15f71126616",
       "source": "issue-labeling/SKILL.md"
     },
     ".claude/skills/probe-testing/SKILL.md": {
@@ -203,8 +209,14 @@
     ".claude/skills/prompt-engineering/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "98be61f9e497e37b7a40593cae5870c83a97053effca489b8b7eda3b1d00e66e",
+      "sha256": "6bef476457c3e7772b3e1c90c3b7b2c68e2f4cfca76092f2d2caa564c7f27a4b",
       "source": "prompt-engineering/SKILL.md"
+    },
+    ".claude/skills/prompt-engineering/acceptance.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "fcfa173660fb781c4c8e6a2e584e652b02b4a61eca1d0d2bf07d9d8e95402087",
+      "source": "prompt-engineering/acceptance.md"
     },
     ".claude/skills/skill-maintenance/SKILL.md": {
       "kind": "file",
