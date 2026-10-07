@@ -8,9 +8,38 @@ set -uo pipefail
 SK="$(cd "$(dirname "$0")" && pwd)"; S="$SK/merge-slot.sh"; PM="$SK/postmerge.sh"
 T=$(mktemp -d) || exit 2; trap 'rm -rf "$T"' EXIT
 export MERGE_CLAIM_DIR="$T/claims"; mkdir -p "$T/bin"
-# stub gh: "which PR does this sha belong to" answers 7; the workflow count and the push runs come from STUB_WF / STUB_RUNS
-# and the merge commit's date from STUB_DATE (default: long ago)
-printf '#!/bin/sh\ncase "$*" in *commits/*/pulls*) echo 7;; *actions/workflows*) echo "${STUB_WF:-0}";; *actions/runs*) printf "%%s" "${STUB_RUNS:-}";; *commits/*) echo "${STUB_DATE:-2026-01-01T00:00:00Z}";; esac\nexit 0\n' > "$T/bin/gh"; chmod +x "$T/bin/gh"; export PATH="$T/bin:$PATH"
+# Faithful offline REST shapes: defaults, paginated runs and required job evidence.
+cat > "$T/bin/gh" <<'PYGH'
+#!/usr/bin/env python3
+import json, os, sys
+request=' '.join(sys.argv)
+if '/pulls' in request and '/commits/' in request: print(7)
+elif '/actions/workflows' in request: print(os.environ.get('STUB_WF','0'))
+elif '/jobs?' in request:
+ names=['lint','security','type-check','unit-tests','integration-tests','build','Docs']
+ print(json.dumps([{'jobs':[{'name':n,'status':'completed','conclusion':'success','head_sha':'a'*40} for n in names]}]))
+elif '/actions/runs?' in request:
+ runs=[]
+ for i,item in enumerate(filter(None,os.environ.get('STUB_RUNS','').split(', '))):
+  path,name,ending=item.rsplit(' ',2);status,conclusion=ending.split('/')
+  if path=='Docs':path='.github/workflows/docs.yml'
+  runs.append({'id':i+1,'path':path,'name':name,'status':status,'conclusion':None if conclusion=='-' else conclusion,'head_sha':'a'*40,'head_branch':'main','event':'push','created_at':'2026-01-01T00:00:00Z'})
+ print(json.dumps([{'workflow_runs':runs}]))
+elif '/commits/' in request: print(os.environ.get('STUB_DATE','2026-01-01T00:00:00Z'))
+elif '--jq .default_branch' in request: print('main')
+else: raise SystemExit('unexpected offline gh request: '+request)
+PYGH
+# Advance only the bounded watcher deadline, never the merge-slot wall clock.
+cat > "$T/bin/date" <<'SHDATE'
+#!/bin/sh
+if [ "${STUB_FAST_WAIT:-0}" = 1 ] && [ "$*" = '+%s' ]; then
+  f="$STUB_CLOCK_DIR/$PPID"; n=0; [ ! -f "$f" ] || n=$(cat "$f"); n=$((n+1)); echo "$n" > "$f"; echo $((1000+n*1600))
+else exec "$STUB_REAL_DATE" "$@"; fi
+SHDATE
+printf '#!/bin/sh\nexit 0\n' > "$T/bin/sleep"
+export STUB_REAL_DATE="$(command -v date)" STUB_CLOCK_DIR="$T/clock"; mkdir "$STUB_CLOCK_DIR"
+chmod +x "$T/bin/gh" "$T/bin/date" "$T/bin/sleep"; export PATH="$T/bin:$PATH"
+
 R=o/r; D="$MERGE_CLAIM_DIR/o__r"; SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 fail=0; n=0
 t() { n=$((n+1)); local name=$1; shift; if "$@" >/dev/null 2>&1; then echo "ok   $n $name"; else echo "FAIL $n $name"; fail=1; fi; }
@@ -45,20 +74,20 @@ tok=$(MERGE_SLOT_ACK=7 "$S" acquire "$R" 8 2>/dev/null); "$S" release "$R" "$tok
 
 C="$MERGE_CLAIM_DIR/netpilot-labs__containerlab-mcp"
 "$S" settle netpilot-labs/containerlab-mcp "$SHA" BROKEN >/dev/null; t "(setup) a stale hold on a no-deploy repo" state "7 BROKEN" "$C"
-STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests in_progress/-" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "postmerge.sh <no-deploy repo>: a RUNNING main run keeps the hold" state "7 BROKEN" "$C"
-STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests completed/failure, Lint completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a FAILED main run keeps it" state "7 BROKEN" "$C"
-STUB_WF=2 STUB_RUNS="" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… no run yet keeps it" state "7 BROKEN" "$C"
-STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests completed/success" STUB_DATE=$(date -u +%FT%TZ) "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a green run on a merge seconds old keeps it (a second workflow's run may not exist yet)" state "7 BROKEN" "$C"
-STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests completed/success, Docs completed/skipped" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a skipped workflow does not verify main or clear its hold" state "7 BROKEN" "$C"
-STUB_WF=2 STUB_RUNS=".github/workflows/cloud-release.yml Cloud completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "successful subset without the expected default-push workflow keeps the hold" state "7 BROKEN" "$C"
-STUB_WF=UNREADABLE STUB_RUNS=".github/workflows/test.yml Tests completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "unreadable workflow inventory cannot verify main" state "7 BROKEN" "$C"
-out=$(STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests completed/success, Docs completed/success" "$PM" containerlab-mcp "$SHA" 2>&1); rc=$?
+STUB_FAST_WAIT=1 STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests in_progress/-" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "postmerge.sh <no-deploy repo>: a RUNNING main run keeps the hold" state "7 BROKEN" "$C"
+STUB_FAST_WAIT=1 STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests completed/failure, .github/workflows/lint.yml Lint completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a FAILED main run keeps it" state "7 RED" "$C"
+STUB_FAST_WAIT=1 STUB_WF=2 STUB_RUNS="" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… no run yet keeps it" state "7 BROKEN" "$C"
+STUB_FAST_WAIT=1 STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests completed/success" STUB_DATE=$(date -u +%FT%TZ) "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a green run on a merge seconds old keeps it (a second workflow's run may not exist yet)" state "7 BROKEN" "$C"
+STUB_FAST_WAIT=1 STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests completed/success, .github/workflows/docs.yml Docs completed/skipped" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a skipped workflow does not verify main or clear its hold" state "7 BROKEN" "$C"
+STUB_FAST_WAIT=1 STUB_WF=2 STUB_RUNS=".github/workflows/cloud-release.yml Cloud completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "successful subset without the expected default-push workflow keeps the hold" state "7 BROKEN" "$C"
+STUB_FAST_WAIT=1 STUB_WF=UNREADABLE STUB_RUNS=".github/workflows/test.yml Tests completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "unreadable workflow inventory cannot verify main" state "7 BROKEN" "$C"
+out=$(STUB_FAST_WAIT=1 STUB_WF=2 STUB_RUNS=".github/workflows/test.yml Tests completed/success, .github/workflows/docs.yml Docs completed/success" "$PM" containerlab-mcp "$SHA" 2>&1); rc=$?
 t "… exits 0"                                        [ $rc -eq 0 ]
 t "… says there is no deploy on merge"               grep -q 'no deploy on merge' <<< "$out"
 t "… green main runs clear the stale hold for that sha" free "$C"
 U="$MERGE_CLAIM_DIR/lz-networks__netpilot-devops"
 "$S" settle lz-networks/netpilot-devops "$SHA" BROKEN >/dev/null
-STUB_WF=1 STUB_RUNS=".github/workflows/custom.yml Custom completed/success" "$PM" netpilot-devops "$SHA" >/dev/null 2>&1; t "unknown positive workflow inventory cannot verify a complete push set" state "7 BROKEN" "$U"
+STUB_FAST_WAIT=1 STUB_WF=1 STUB_RUNS=".github/workflows/custom.yml Custom completed/success" "$PM" netpilot-devops "$SHA" >/dev/null 2>&1; t "unknown positive workflow inventory cannot verify a complete push set" state "7 BROKEN" "$U"
 K="$MERGE_CLAIM_DIR/lz-networks__netpilot-skills"
 tok=$("$S" acquire lz-networks/netpilot-skills 9); "$PM" netpilot-skills "$SHA" >/dev/null 2>&1
 t "… and leaves another PR's in-flight slot alone"   state "9 inflight" "$K"

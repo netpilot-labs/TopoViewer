@@ -19,6 +19,11 @@ def api(route, *, pages=False, logs=False):
     if logs:
         args += ["--allow-escape-sequences"]
     result = subprocess.run(args, text=True, capture_output=True, timeout=60)
+    # Older gh builds have no escape-output flag. Retry only that explicit CLI
+    # incompatibility, on the same read-only route; evidence failures still hold.
+    if logs and result.returncode and re.search(
+            r"(?m)^unknown flag: --allow-escape-sequences\s*$", result.stderr):
+        result = subprocess.run(args[:-1], text=True, capture_output=True, timeout=60)
     if result.returncode:
         raise ValueError("GitHub evidence unavailable")
     return result.stdout if logs else json.loads(result.stdout)

@@ -36,7 +36,17 @@ case "${3:-}" in "") ;; --dry-run) DRY=1 ;; *) echo "merge.sh: unknown argument 
 CARVEOUT_MARGIN_S=60
 final() { echo "merge.sh: FINAL $1${DRYDRAFT:-}"; exit "$2"; }   # DRYDRAFT carries the draft caveat on EVERY dry-run exit
 SK="$(cd "$(dirname "$0")" && pwd)"          # resolved BEFORE leaving the caller's cwd
-TMPD=$(mktemp -d) || final "BROKEN mktemp failed (TMPDIR full or unavailable)" 2
+TOKEN=""; KEEP=0; MERGED=""
+TMPD=$(mktemp -d "${TMPDIR:-/tmp}/netpilot-merge.XXXXXXXX") || final "BROKEN mktemp failed (TMPDIR full or unavailable)" 2
+cleanup() {
+  local rc=$?
+  if [ -n "$TOKEN" ] && [ "$KEEP" = 0 ]; then "$SK/merge-slot.sh" release "$REPO" "$TOKEN" ${MERGED:+merged}; fi
+  # Only remove the private directory created by this invocation, including on dry-run failures.
+  cd / || return "$rc"
+  [ -n "$TMPD" ] && [ -d "$TMPD" ] && rm -rf -- "$TMPD"
+  return "$rc"
+}
+trap cleanup EXIT; trap 'exit 130' INT TERM
 cd "$TMPD" || final "BROKEN cannot cd to $TMPD" 2                   # never run `gh pr merge --delete-branch` inside a checkout: the local
                                               # cleanup fails there and the remote delete is silently skipped (FE#106, BE#287)
 
@@ -56,10 +66,8 @@ DEFAULT_BASE=$(gh api "repos/$REPO" --jq .default_branch 2>/dev/null) || final "
 [ "$MERGEABLE" = "MERGEABLE" ] || final "NOT MERGED mergeable=$MERGEABLE ($MSS) — resolve the conflict first" 1
 
 # 1b merge slot
-TOKEN=""; KEEP=0; MERGED=""
 if [ $DRY = 1 ]; then "$SK/merge-slot.sh" peek "$REPO" | sed 's/^/merge.sh: (dry-run) /'
 else
-  trap '[ -n "$TOKEN" ] && [ $KEEP = 0 ] && "$SK/merge-slot.sh" release "$REPO" "$TOKEN" ${MERGED:+merged}' EXIT; trap 'exit 130' INT TERM
   SLOT_OUT=$("$SK/merge-slot.sh" acquire "$REPO" "$PR") || final "NOT MERGED $SLOT_OUT" 1
   TOKEN=$SLOT_OUT
 fi
@@ -117,9 +125,9 @@ else
 fi
 
 # 4 the two gates
-if [ -n "$GATE_SINCE" ]; then "$SK/pr-gates.sh" "$PR" --repo "$REPO" --since "$GATE_SINCE" > /tmp/merge-gate.$$ 2>&1; rc=$?
-else "$SK/pr-gates.sh" "$PR" --repo "$REPO" > /tmp/merge-gate.$$ 2>&1; rc=$?; fi
-grep -E '^(READY|NOT READY|BROKEN)' /tmp/merge-gate.$$ | head -1; rm -f /tmp/merge-gate.$$
+if [ -n "$GATE_SINCE" ]; then "$SK/pr-gates.sh" "$PR" --repo "$REPO" --since "$GATE_SINCE" > "$TMPD/merge-gate" 2>&1; rc=$?
+else "$SK/pr-gates.sh" "$PR" --repo "$REPO" > "$TMPD/merge-gate" 2>&1; rc=$?; fi
+grep -E '^(READY|NOT READY|BROKEN)' "$TMPD/merge-gate" | head -1; rm -f "$TMPD/merge-gate"
 [ $rc -eq 0 ] || final "NOT MERGED pr-gates rc=$rc" $([ $rc -eq 2 ] && echo 2 || echo 1)
 [ $DRY = 1 ] && final "DRY-RUN ok — steps 1–4 pass on head ${HEAD:0:10}" 0
 
@@ -134,12 +142,12 @@ fi
 # 6 merge + assert; the merge oid can lag state=MERGED by a few seconds (PR #23 R1 P2)
 # The slot must still be OURS (a run paused past the stale limit was taken over). EVERY repo keeps it from BEFORE the
 # merge call — an interrupt mid-call can leave a merge GitHub already accepted — and gives it back only on a proven
-# outcome: not merged, or merged in a repo with no deploy watch (skills PR#55).
+# outcome: not merged, or a subsequent clean postmerge check for every known repository.
 "$SK/merge-slot.sh" check "$REPO" "$TOKEN" || { TOKEN=""; final "NOT MERGED this run's merge slot was taken over (paused past the stale limit?) — re-run from --dry-run" 1; }
-WATCH=0; case "${REPO#*/}" in NetPilot-2-Backend|NetPilot-2-LB|NetPilot-2-Frontend|netpilot-marketing) WATCH=1;; esac
+WATCH=0; case "${REPO#*/}" in NetPilot-2-Backend|NetPilot-2-LB|NetPilot-2-Frontend|netpilot-marketing|containerlab-mcp|netpilot-skills|netpilot-probe-lab|netpilot-devops|netpilot-dev|netpilot-lead-desk|netpilot-support-desk|netpilot-marketing-monitor|3rd-party-apps|TopoViewer|topoViewer) WATCH=1;; esac
 KEEP=1
-gh pr merge "$PR" -R "$REPO" --squash --delete-branch --match-head-commit "$HEAD" > /tmp/merge-out.$$ 2>&1; rc=$?
-cat /tmp/merge-out.$$; rm -f /tmp/merge-out.$$
+gh pr merge "$PR" -R "$REPO" --squash --delete-branch --match-head-commit "$HEAD" > "$TMPD/merge-out" 2>&1; rc=$?
+cat "$TMPD/merge-out"; rm -f "$TMPD/merge-out"
 if [ $rc -ne 0 ]; then
   st=$(gh pr view "$PR" -R "$REPO" --json state --jq .state 2>/dev/null)
   case "$st" in
@@ -162,7 +170,7 @@ MP1=$(gh api "repos/$REPO/commits/$MOID" --jq '.parents[0].sha' 2>/dev/null)
 # a base that moved inside the window keeps the slot in EVERY repo (the sha recorded, so postmerge.sh can settle it): in a
 # no-watch repo too, nothing else merges until main is verified (Codex, skills PR#60)
 [ "$MP1" = "$TIP2" ] || { if [ $WATCH = 0 ]; then "$SK/merge-slot.sh" sha "$REPO" "$TOKEN" "$MOID" || final "BROKEN merged as $MOID but the merge-slot SHA could not be recorded; reconcile the held slot before deploy watch or another merge" 2; fi; echo "merge.sh: WARNING — merge commit's parent ${MP1:0:10} != the base tip checked seconds earlier ${TIP2:0:10}: main advanced inside the window; verify main's CI / revert per deploy.md — the merge slot stays held until \`postmerge.sh ${REPO#*/} $MOID\`"; final "BROKEN merged onto a base that moved inside the window; merge oid $MOID" 2; }
-[ $WATCH = 0 ] && { KEEP=0; MERGED=1; }   # proven merged on the checked base, no deploy watch to wait for: released at exit — and an acknowledged hold with it
+[ $WATCH = 0 ] && { KEEP=0; MERGED=1; }   # proven merged on the checked base, unknown repository without a configured postmerge watch: released at exit — and an acknowledged hold with it
 final "MERGED $MOID" 0
 }
 main "$@"

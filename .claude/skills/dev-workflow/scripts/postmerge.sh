@@ -51,15 +51,25 @@ ws=${WORKSPACE:-$(cd "$(dirname "$0")/../../../.." && pwd)}; [ -d "$ws/$folder/.
 red=0; broken=0; review=0; ci_only=""; outage=0; ph_since=""
 say() { printf '%s %s\n' "$(date -u +%H:%M:%SZ)" "$*"; }
 SLOT="$(cd "$(dirname "$0")" && pwd)/merge-slot.sh"
-# The repo is settled BEFORE the deployment settle trap is armed. No-deploy repos verify CI
-# without creating a deployment hold; an unknown name is a typo — neither creates a new hold (`unknown repo` did, as a late BROKEN nobody could clear:
-# clab PR#264, 2026-10-02). A hold ALREADY kept for this sha (that stale one; merge.sh's "base moved inside the window")
-# is freed only on a verified main — every relevant push run/job for the sha completed/success on a merge at least RUNS_APPEAR_S old
-# (so no workflow's run is still to be minted), or a repo with no workflows; an unreadable, missing, running or failed run
-# leaves it held (Codex, skills PR#60). No other holder is touched.
+no_deploy=0
+case "$R" in
+  NetPilot-2-Backend|NetPilot-2-LB|NetPilot-2-Frontend|netpilot-marketing|containerlab-mcp|netpilot-skills|netpilot-probe-lab|netpilot-devops|netpilot-dev|netpilot-lead-desk|netpilot-support-desk|netpilot-marketing-monitor|3rd-party-apps|TopoViewer) ;;
+  *) echo "unknown repo $R — refusing to create a merge hold" >&2; exit 2;;
+esac
+# merge-slot.sh settle on EVERY exit: clean frees the repo's merge slot; RED/BROKEN/REVIEW (an interrupted watch is
+# BROKEN) is written into it and it stays held until read (skills PR#55). SLOT's path was resolved before any cd.
+slot_result() { case $1 in 0) [ $skip_sentry = 1 ] && [ $no_deploy = 0 ] && echo clean-skip || echo clean;; 3) echo REVIEW;; 1) [ $review = 1 ] && echo RED+REVIEW || echo RED;; *) [ $review = 1 ] && echo BROKEN+REVIEW || echo BROKEN;; esac; }
+trap 'rc=$?; [ -x "$SLOT" ] && "$SLOT" settle "$OWNER/$R" "$sha" "$(slot_result $rc)"' EXIT
+trap 'exit 2' INT TERM
+
+# Known no-deploy repositories hold the same merge slot through bounded default-branch CI.
+# Arm settlement before inventory reads so API failure records BROKEN, including on a fresh
+# merge. Unknown names were rejected above and cannot create holds. Required push evidence
+# must be complete, successful and old enough for all workflow runs to have been minted.
 case "$R" in
   NetPilot-2-Backend|NetPilot-2-LB|NetPilot-2-Frontend|netpilot-marketing) ;;
   containerlab-mcp|netpilot-skills|netpilot-probe-lab|netpilot-devops|netpilot-dev|netpilot-lead-desk|netpilot-support-desk|netpilot-marketing-monitor|3rd-party-apps|TopoViewer)
+    no_deploy=1
     wf=$(gh api "repos/$OWNER/$R/actions/workflows" --jq .total_count) || wf="UNREADABLE"
     expected_push=""
     case "$R" in
@@ -69,7 +79,6 @@ case "$R" in
     esac
     if [ "$wf" = 0 ] && [ -z "$expected_push" ]; then
       say "RESULT: no deploy on merge for $R — no workflows; no default-branch CI to wait for"
-      [ -x "$SLOT" ] && "$SLOT" settle "$OWNER/$R" "$sha" clean
       exit 0
     fi
     if ! [[ "$wf" =~ ^[0-9]+$ ]] || [ "$wf" = 0 ] || [ -z "$expected_push" ]; then
@@ -106,7 +115,6 @@ case "$R" in
       age=$(gh api "repos/$OWNER/$R/commits/$sha" --jq .commit.committer.date | python3 -c 'import sys,datetime,time; print(int(time.time()-datetime.datetime.fromisoformat(sys.stdin.read().strip().replace("Z","+00:00")).timestamp()))' 2>/dev/null) || { say "RESULT: BROKEN — merge commit age unreadable"; exit 2; }
       if [ "$pending" = 0 ] && [[ "$age" =~ ^[0-9]+$ ]] && [ "$age" -ge $RUNS_APPEAR_S ]; then
         say "RESULT: no deploy on merge for $R — required default-branch push workflows/jobs verified for ${sha:0:8}"
-        [ -x "$SLOT" ] && "$SLOT" settle "$OWNER/$R" "$sha" clean
         exit 0
       fi
       [ "$(date +%s)" -ge "$deadline" ] && { say "RESULT: BROKEN — required default-branch push CI missing or pending after 25 minutes for ${sha:0:8}; any existing hold stays"; exit 2; }
@@ -115,11 +123,6 @@ case "$R" in
     done;;
   *) echo "unknown repo $R — deploy repos: NetPilot-2-Backend NetPilot-2-LB NetPilot-2-Frontend netpilot-marketing; no deploy on merge: containerlab-mcp netpilot-skills netpilot-probe-lab netpilot-devops netpilot-dev netpilot-lead-desk netpilot-support-desk netpilot-marketing-monitor 3rd-party-apps topoViewer" >&2; exit 2;;
 esac
-# merge-slot.sh settle on EVERY exit: clean frees the repo's merge slot; RED/BROKEN/REVIEW (an interrupted watch is
-# BROKEN) is written into it and it stays held until read (skills PR#55). SLOT's path was resolved before any cd.
-slot_result() { case $1 in 0) [ $skip_sentry = 1 ] && echo clean-skip || echo clean;; 3) echo REVIEW;; 1) [ $review = 1 ] && echo RED+REVIEW || echo RED;; *) [ $review = 1 ] && echo BROKEN+REVIEW || echo BROKEN;; esac; }
-trap 'rc=$?; [ -x "$SLOT" ] && "$SLOT" settle "$OWNER/$R" "$sha" "$(slot_result $rc)"' EXIT
-trap 'exit 2' INT TERM
 
 probe_samples() {  # url [curl timeout] -> HEALTH_SAMPLES samples. Only an HTTP answer other than 200 counts toward an
   # outage; a sample with NO answer (curl rc!=0 / 000: DNS, connect, timeout on THIS machine) never does (Codex, skills PR#54)
@@ -167,9 +170,12 @@ print("NONE")' "$sha") || st=PARSE
 }
 
 main_run_wait() {  # backend: the push run on main for this sha
-  local deadline=$(( $(date +%s) + 25*60 )) id st
+  local deadline=$(( $(date +%s) + 25*60 )) id st default raw
+  default=$(gh api "repos/$OWNER/$R" --jq .default_branch) || { say "BROKEN: cannot read backend default branch"; broken=1; return; }
+  [ -n "$default" ] && [ "$default" != null ] || { say "BROKEN: backend default branch unreadable"; broken=1; return; }
   while :; do
-    id=$(gh api "repos/$OWNER/$R/actions/runs?head_sha=$sha&event=push" --jq '.workflow_runs[0].id // empty')
+    raw=$(gh api "repos/$OWNER/$R/actions/runs?head_sha=$sha&event=push&per_page=100" --paginate --slurp) || { say "BROKEN: cannot read backend push runs"; broken=1; return; }
+    id=$(printf '%s' "$raw" | jq -r --arg head "$sha" --arg branch "$default" '[.[].workflow_runs[] | select(.head_sha==$head and .head_branch==$branch and .event=="push" and (.path|split("@")[0])==".github/workflows/agents_service.yml")] | sort_by(.created_at,.id) | last | .id // empty') || { say "BROKEN: backend push run inventory unreadable"; broken=1; return; }
     [ -n "$id" ] && break; [ $(date +%s) -gt $deadline ] && { say "BROKEN: no push run on main for ${sha:0:8}"; broken=1; return; }; sleep 20
   done
   while :; do

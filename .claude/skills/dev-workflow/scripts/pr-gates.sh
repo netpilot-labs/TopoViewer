@@ -67,28 +67,125 @@ say() { [ "$QUIET" = 1 ] || echo "$@"; }
 # reviews by round 8). GraphQL last:N reads the NEWEST end — the REST
 # pulls/N/reviews default (first 30, ASCENDING) went permanently blind the
 # moment the count crossed a page, which is why hand-rolled REST watchers are
-# banned (review.md, "Reading the verdict"). Keep the windows ahead of loop growth.
+# banned (review.md, "Reading the verdict"). Read the newest page, then page backwards
+# until the complete history is buffered; unresolved findings never age out of the gate.
 # ---------------------------------------------------------------------------
-# One validated API snapshot per phase/poll; local filters never spend more quota.
-GQ_QUERY="
-  {repository(owner:\"$OWNER\",name:\"$NAME\"){pullRequest(number:$PR){
-    headRefOid headRefName state isDraft
-    reviews(last:50){totalCount nodes{commit{oid} submittedAt author{login} body
-      comments(first:50){totalCount nodes{body}}}}
-    comments(last:50){totalCount nodes{author{login} authorAssociation createdAt body}}
-    reviewThreads(last:100){totalCount nodes{isResolved comments(first:1){nodes{author{login} originalCommit{oid} createdAt body path}}}}
-  }}}"
+# One buffered snapshot per phase/poll; large histories page backwards before any filters.
 refresh_snapshot() {
-  GQ_SNAPSHOT=$(gh api graphql -f query="$GQ_QUERY" 2>/dev/null) || { echo "BROKEN: cannot read PR review snapshot (auth, network or rate limit)"; return 2; }
-  printf '%s\n' "$GQ_SNAPSHOT" | jq -e '
-    ((.errors // []) | length)==0 and
-    (.data.repository.pullRequest | type)=="object" and
-    (.data.repository.pullRequest as $p |
-      ($p.headRefOid | type)=="string" and ($p.headRefOid | test("^[0-9a-fA-F]{40}$")) and
-      ($p.isDraft | type)=="boolean" and
-      ([$p.reviews,$p.comments,$p.reviewThreads] | all(.[];
-        type=="object" and (.nodes | type)=="array" and (.totalCount | type)=="number")))
-  ' >/dev/null 2>&1 || { echo "BROKEN: invalid PR review snapshot (API errors, missing data or invalid head/evidence)"; return 2; }
+  GQ_SNAPSHOT=$(python3 - "$OWNER" "$NAME" "$PR" <<'PY'
+import json
+import re
+import subprocess
+import sys
+import time
+
+owner, name, number = sys.argv[1:]
+fields = {
+    "reviews": "id commit{oid} submittedAt author{login} body comments(first:50){totalCount nodes{body}}",
+    "comments": "id author{login} authorAssociation createdAt body",
+    "reviewThreads": "id isResolved comments(first:1){nodes{author{login} originalCommit{oid} createdAt body path}}",
+}
+sizes = {"reviews": 50, "comments": 50, "reviewThreads": 100}
+metadata = "headRefOid headRefName state isDraft"
+deadline = time.monotonic() + 120
+
+
+def query(selection):
+    return "{repository(owner:" + json.dumps(owner) + ",name:" + json.dumps(name) + "){pullRequest(number:" + str(int(number)) + "){" + metadata + " " + selection + "}}}"
+
+
+def connection(key, cursor=None):
+    before = ",before:" + json.dumps(cursor) if cursor is not None else ""
+    return key + "(last:" + str(sizes[key]) + before + "){totalCount pageInfo{hasPreviousPage startCursor} nodes{" + fields[key] + "}}"
+
+
+def read(selection):
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise ValueError("snapshot pagination exceeded its 120s budget")
+    result = subprocess.run(["gh", "api", "graphql", "-f", "query=" + query(selection)],
+                            capture_output=True, text=True, timeout=min(60, remaining))
+    if result.returncode:
+        raise ValueError("API read failed (auth, network or rate limit)")
+    response = json.loads(result.stdout)
+    if not isinstance(response, dict) or response.get("errors"):
+        raise ValueError("API errors or malformed response")
+    pr = response.get("data", {}).get("repository", {}).get("pullRequest")
+    if not isinstance(pr, dict) or not isinstance(pr.get("headRefOid"), str) or not re.fullmatch(r"[0-9a-fA-F]{40}", pr["headRefOid"]) or not isinstance(pr.get("isDraft"), bool):
+        raise ValueError("missing PR data or invalid head")
+    return pr
+
+
+def count(value):
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ValueError("invalid connection count")
+    return value
+
+
+def page(pr, key):
+    value = pr.get(key)
+    if not isinstance(value, dict) or not isinstance(value.get("nodes"), list) or not all(isinstance(node, dict) for node in value["nodes"]):
+        raise ValueError("malformed " + key + " page")
+    count(value.get("totalCount"))
+    if len(value["nodes"]) > value["totalCount"]:
+        raise ValueError("page exceeds its connection count")
+    return value
+
+
+try:
+    snapshot = read(" ".join(connection(key) for key in fields))
+    identity = tuple(snapshot.get(key) for key in ("headRefOid", "headRefName", "state", "isDraft"))
+    totals = {}
+    paginated = False
+    for key in fields:
+        current = page(snapshot, key)
+        total = totals[key] = current["totalCount"]
+        nodes = list(current["nodes"])
+        if any("id" in node for node in nodes):
+            ids = [node.get("id") for node in nodes]
+            if any(not isinstance(item, str) or not item for item in ids) or len(set(ids)) != len(ids):
+                raise ValueError("missing/duplicate initial node identity")
+        cursors = set()
+        pages = 1
+        while len(nodes) < total:
+            paginated = True
+            info = current.get("pageInfo")
+            if not isinstance(info, dict) or info.get("hasPreviousPage") is not True or not isinstance(info.get("startCursor"), str) or not info["startCursor"]:
+                raise ValueError("truncated " + key + " history: missing previous-page cursor")
+            cursor = info["startCursor"]
+            if cursor in cursors or pages >= 100:
+                raise ValueError("repeated cursor or excessive " + key + " pagination")
+            cursors.add(cursor)
+            older_pr = read(connection(key, cursor))
+            if tuple(older_pr.get(field) for field in ("headRefOid", "headRefName", "state", "isDraft")) != identity:
+                raise ValueError("PR head/state changed during pagination")
+            current = page(older_pr, key)
+            older_info = current.get("pageInfo")
+            if not isinstance(older_info, dict) or not isinstance(older_info.get("hasPreviousPage"), bool) or not isinstance(older_info.get("startCursor"), str) or not older_info["startCursor"] or older_info["startCursor"] in cursors:
+                raise ValueError("missing or repeated previous-page boundary")
+            if current["totalCount"] != total or not current["nodes"]:
+                raise ValueError("connection count changed or empty previous page")
+            nodes = current["nodes"] + nodes
+            ids = [node.get("id") for node in nodes]
+            if any(not isinstance(item, str) or not item for item in ids) or len(set(ids)) != len(ids) or len(nodes) > total:
+                raise ValueError("missing/duplicate node identity or inconsistent page count")
+            pages += 1
+        info = current.get("pageInfo")
+        # Complete small legacy fixtures omit pageInfo; real API requests always ask for it.
+        if info is not None and (not isinstance(info, dict) or info.get("hasPreviousPage") is not False):
+            raise ValueError("inconsistent final pagination boundary")
+        snapshot[key]["nodes"] = nodes
+        snapshot[key]["totalCount"] = total
+    if paginated:
+        final = read(" ".join(key + "(last:1){totalCount}" for key in fields))
+        if tuple(final.get(field) for field in ("headRefOid", "headRefName", "state", "isDraft")) != identity or any(count(final.get(key, {}).get("totalCount")) != totals[key] for key in fields):
+            raise ValueError("PR head/state or connection count changed before snapshot completion")
+    print(json.dumps({"data": {"repository": {"pullRequest": snapshot}}}))
+except (ValueError, TypeError, AttributeError, KeyError, subprocess.SubprocessError, OSError) as error:
+    print("BROKEN: review evidence unreadable (PR review snapshot): " + str(error))
+    sys.exit(2)
+PY
+  ) || { echo "$GQ_SNAPSHOT"; return 2; }
 }
 gq() { printf '%s\n' "$GQ_SNAPSHOT" | jq -r "$1"; }
 refresh_snapshot || exit 2
@@ -124,8 +221,7 @@ req_ts() {
 
 report() {
   local head="$1" reqts="$2" windows
-  # A bounded tail must never conceal an older unresolved finding or disposition.
-  # Refuse over-window histories until a paginated evidence reader is implemented.
+  # The buffered reader must cover every node; local filters never trust partial history.
   windows="$(gq '.data.repository.pullRequest | [.reviews, .comments, .reviewThreads] | all(.[]; (.totalCount|type)=="number" and .totalCount==(.nodes|length))')"
   if [ "$windows" != true ]; then
     echo "BROKEN: review evidence is truncated or unreadable — cannot gate this PR from bounded tails"

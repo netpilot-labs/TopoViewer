@@ -28,6 +28,10 @@
       "kind": "link",
       "target": "../../.claude/skills/prompt-engineering"
     },
+    ".agents/skills/sdk-upgrade-adoption": {
+      "kind": "link",
+      "target": "../../.claude/skills/sdk-upgrade-adoption"
+    },
     ".agents/skills/skill-maintenance": {
       "kind": "link",
       "target": "../../.claude/skills/skill-maintenance"
@@ -71,7 +75,7 @@
     ".claude/skills/dependency-updates/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "a1fe8db6387dbde62a08a51e82fed9c20596ee5c20e8cd34e2cb30ea8451be5b",
+      "sha256": "f32b79e7e3b17d9839a1a3023f74eeaa0270f59418f4634d82363d369692f193",
       "source": "dependency-updates/SKILL.md"
     },
     ".claude/skills/dependency-updates/gotchas.md": {
@@ -91,6 +95,12 @@
       "mode": 420,
       "sha256": "96c864fc786302f65022b5102ddbf5aebf6ba47c57e2d8fb1f4efc3f6e79ef3f",
       "source": "dependency-updates/mechanics.md"
+    },
+    ".claude/skills/dependency-updates/pass.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "90a167b084c690296d30381095dd0071e5752baa7b202386ba04e430147ec68b",
+      "source": "dependency-updates/pass.md"
     },
     ".claude/skills/dependency-updates/scripts/alert.sh": {
       "kind": "file",
@@ -257,13 +267,13 @@
     ".claude/skills/dev-workflow/scripts/merge-checkout-proof.py": {
       "kind": "file",
       "mode": 493,
-      "sha256": "9aea71c80b241321747512a24bb768dfd41387ca287380b6e9aa135b28fdef72",
+      "sha256": "e4d148f8cc25489d4a692452221bbde46913aae58aaf077c33d6b447cf566bf3",
       "source": "dev-workflow/scripts/merge-checkout-proof.py"
     },
     ".claude/skills/dev-workflow/scripts/merge-slot-selftest.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "f996ccc9d7df06f7b82e8ba9ea11a6cbabf95662092a640cc4399bf9cbe60c9b",
+      "sha256": "1014aaaba256c53b48a100f85d7c22bb42cf107c758d304679ba21c1b5051ee5",
       "source": "dev-workflow/scripts/merge-slot-selftest.sh"
     },
     ".claude/skills/dev-workflow/scripts/merge-slot.sh": {
@@ -275,19 +285,19 @@
     ".claude/skills/dev-workflow/scripts/merge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "de8c82fc70ad30d5dd704334a281cb01f122c88a30526ffcb086863a1b87e001",
+      "sha256": "8fcbbdc02f7d76145f47dd76b78347a8a48b789c4620e18f9d2228ef8741e3da",
       "source": "dev-workflow/scripts/merge.sh"
     },
     ".claude/skills/dev-workflow/scripts/postmerge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "50c47839175b6e026cce8fc1fb5f070e9c9cb14d375770f8d641dbbf94e4fa18",
+      "sha256": "00335b4074d46ea5e261254d46e1ba59e0d373f242626f6c6cfd88ffb66e1477",
       "source": "dev-workflow/scripts/postmerge.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-gates.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "a0f13386516e26d7720689af515bdfde323d32166b71dbfb13def4a5fc68a339",
+      "sha256": "47ee1bb868170dab88d18346a737817948261f776e188d00f0c2d87d6eb01ab2",
       "source": "dev-workflow/scripts/pr-gates.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-threads.py": {
@@ -398,11 +408,29 @@
       "sha256": "fcfa173660fb781c4c8e6a2e584e652b02b4a61eca1d0d2bf07d9d8e95402087",
       "source": "prompt-engineering/acceptance.md"
     },
+    ".claude/skills/sdk-upgrade-adoption/SKILL.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "aef8ddf8e436cefd43613eb63fdd8a995c824f8d3206ba96661502555a78f814",
+      "source": "sdk-upgrade-adoption/SKILL.md"
+    },
     ".claude/skills/sdk-upgrade-adoption/bump-battery.md": {
       "kind": "file",
       "mode": 420,
       "sha256": "7815b204409e33d2aa236b14b86728ff0a7fc97e03ca95a44381b1dc0231ed64",
       "source": "sdk-upgrade-adoption/bump-battery.md"
+    },
+    ".claude/skills/sdk-upgrade-adoption/decision-patterns.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "6b88a319ae485d4fc31025d83a49033ad4fea4dac4d521739cd19b12a65a7419",
+      "source": "sdk-upgrade-adoption/decision-patterns.md"
+    },
+    ".claude/skills/sdk-upgrade-adoption/issue-shapes.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "77f0d36c0eff3a4afc0e2ea6ad117e1eb7ca31dd7304913439edec0d61453fce",
+      "source": "sdk-upgrade-adoption/issue-shapes.md"
     },
     ".claude/skills/skill-maintenance/SKILL.md": {
       "kind": "file",
