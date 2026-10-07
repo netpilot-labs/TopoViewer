@@ -146,6 +146,54 @@ railway_health() {
   fi
 }
 
+deployment_identity() {  # called at signal acceptance and once more before clean settlement
+  local live="" raw ids id candidate status
+  case "$R" in
+    NetPilot-2-Backend|NetPilot-2-LB)
+      raw=$(railway deployment list --service "$R" --limit 100 --json 2>/dev/null) || { say "BROKEN: latest served Railway deployment unreadable"; broken=1; return; }
+      live=$(printf '%s' "$raw" | python3 -c '
+import datetime,json,re,sys
+try:
+ rows=json.load(sys.stdin)
+ if not isinstance(rows,list): raise ValueError("deployment list")
+ active=[x for x in rows if x.get("status")=="SUCCESS"]
+ if not active: raise ValueError("no successful deployment")
+ def key(x): return datetime.datetime.fromisoformat(x["createdAt"].replace("Z","+00:00"))
+ current=max(active,key=key); sha=(current.get("meta") or {}).get("commitHash","")
+ if not re.fullmatch("[0-9a-fA-F]{40}",sha): raise ValueError("deployment SHA")
+ print(sha)
+except (ValueError,TypeError,KeyError,AttributeError): sys.exit(2)') || { say "BROKEN: latest served Railway deployment identity unreadable"; broken=1; return; };;
+    netpilot-marketing)
+      ids=$(gh api "repos/$OWNER/$R/deployments?environment=production&per_page=100" --paginate --slurp | python3 -c '
+import datetime,json,re,sys
+try:
+ pages=json.load(sys.stdin)
+ if not isinstance(pages,list) or any(not isinstance(p,list) for p in pages): raise ValueError("deployment pages")
+ rows=[x for page in pages for x in page if x.get("environment","").lower()=="production"]
+ def key(x):
+  when=datetime.datetime.fromisoformat(x["created_at"].replace("Z","+00:00"))
+  if when.tzinfo is None or not isinstance(x["id"],int) or x["id"]<=0 or not re.fullmatch("[0-9a-fA-F]{40}",x["sha"]): raise ValueError("deployment identity")
+  return when,x["id"]
+ for x in sorted(rows,key=key,reverse=True): print(str(x["id"])+"\t"+x["sha"])
+except (ValueError,TypeError,KeyError,AttributeError): sys.exit(2)') || { say "BROKEN: latest Production deployment inventory unreadable"; broken=1; return; }
+      while IFS=$'\t' read -r id candidate; do
+        [ -n "$id" ] || continue
+        [[ "$id" =~ ^[0-9]+$ ]] && [[ "$candidate" =~ ^[0-9a-fA-F]{40}$ ]] || { say "BROKEN: latest Production deployment identity unreadable"; broken=1; return; }
+        status=$(gh api "repos/$OWNER/$R/deployments/$id/statuses" --jq '.[0].state // "unreadable"') || { say "BROKEN: latest Production deployment status unreadable"; broken=1; return; }
+        case "$status" in
+          success) live=$candidate; break;;
+          pending|queued|in_progress|failure|error|inactive) ;; # these records do not prove a newly serving deployment
+          *) say "BROKEN: latest Production deployment status unreadable ($status)"; broken=1; return;;
+        esac
+      done <<< "$ids"
+      [ -n "$live" ] || { say "BROKEN: no successful Production deployment identity"; broken=1; return; };;
+  esac
+  if [ "$live" != "$sha" ]; then
+    say "REVIEW: live deployment $live differs from watched $sha — attribute both diffs and restart the dependency ride-out clock from the newer deployment; do not release the merge slot"
+    review=1
+  else say "current served deployment identity verified for ${sha:0:8}"; fi
+}
+
 railway_wait() {  # service -> waits for the sha's deployment
   local svc=$1 deadline=$(( $(date +%s) + DEPLOY_TIMEOUT_MIN*60 )) st bad=0
   cd "$ws/$R" || { broken=1; return; }
@@ -160,7 +208,7 @@ for x in d:
 print("NONE")' "$sha") || st=PARSE
     [ "$st" != PARSE ] && bad=0
     case "$st" in
-      SUCCESS) say "railway $svc: SUCCESS for ${sha:0:8}"; return;;
+      SUCCESS) say "railway $svc: SUCCESS for ${sha:0:8}"; deployment_identity; return;;
       FAILED|CRASHED) say "RED: railway $svc deployment $st for ${sha:0:8}"; red=1; return;;
       NEEDS_APPROVAL) say "BROKEN: railway deployment NEEDS_APPROVAL (dev-workflow/deploy.md has the GraphQL approve)"; broken=1; return;;
       PARSE) bad=$((bad+1)); if [ $bad -ge $PARSE_TOLERANCE ]; then say "BROKEN: railway CLI output unparseable ${bad}× in a row — unauthenticated or CLI outage; run it in the foreground (dev-workflow/deploy.md)"; broken=1; return; fi; say "railway $svc: transient unparseable response ($bad/$PARSE_TOLERANCE) …"; sleep 20;;
@@ -215,12 +263,13 @@ vercel_wait() {  # route url [version-url]
   while :; do
     st=$(gh api "repos/$OWNER/$R/deployments/$id/statuses" --jq '.[0].state // "pending"')
     case "$st" in
-      success) say "vercel deployment $id: success"; break;;
+      success) say "vercel deployment $id: success"; if [ "$R" = netpilot-marketing ]; then deployment_identity; [ $broken = 0 ] && [ $review = 0 ] || return; fi; break;;
       failure|error) say "RED: vercel deployment $id: $st (the fix is NOT live)"; red=1; probe_samples "$1" 15; return;;
       *) [ $(date +%s) -gt $deadline ] && { say "BROKEN: vercel deployment $id still $st"; broken=1; return; }; sleep 20;;
     esac
   done
   probe_samples "$1" 15  # also run after a FAILED deploy above, so the RESULT line never guesses
+  [ $red = 0 ] && [ $outage = 0 ] || return  # report confirmed impact before version/capture waits
   if [ -n "${2:-}" ]; then
     # The CDN can still answer with the previous deployment's stamp for a few seconds after the
     # deployment reports success (FE#499: previous sha at +1 s, new sha at +2 s, 2026-09-11) —
@@ -248,15 +297,16 @@ sentry_new() {  # project slug
 case "$R" in
   NetPilot-2-Backend)
     # health is sampled after a FAILED/CRASHED deploy too: it decides roll back vs fix forward (Codex, skills PR#54)
-    railway_wait NetPilot-2-Backend; dep_red=$red; [ $broken = 0 ] && { railway_health; [ $dep_red = 0 ] && [ $red = 0 ] && [ $broken = 0 ] && main_run_wait; }
+    railway_wait NetPilot-2-Backend; dep_red=$red; [ $broken = 0 ] && [ $review = 0 ] && { railway_health; [ $dep_red = 0 ] && [ $red = 0 ] && [ $broken = 0 ] && [ $review = 0 ] && main_run_wait; }
     [ $outage = 0 ] && sentry_new netpilot-backend;;
   NetPilot-2-LB)
-    railway_wait NetPilot-2-LB; [ $broken = 0 ] && railway_health;;
+    railway_wait NetPilot-2-LB; [ $broken = 0 ] && [ $review = 0 ] && railway_health;;
   NetPilot-2-Frontend)
-    vercel_wait https://app.netpilot.io/sign-in https://app.netpilot.io/version.json; sentry_new netpilot-frontend
+    vercel_wait https://app.netpilot.io/sign-in https://app.netpilot.io/version.json; [ $outage = 0 ] && sentry_new netpilot-frontend
     # capture signal (mechanics §8): REVIEW on 0 events, "not configured" without a personal key — never red by itself
     # The helper stays owned by dependency-updates; portable development profiles export it
     # even when that operational skill is not enabled. Missing installation is not signal proof.
+    if [ $red = 0 ] && [ $outage = 0 ]; then
     phs="$(dirname "$0")/../../dependency-updates/scripts/posthog-signal.sh"
     if [ -x "$phs" ]; then
       if [ -z "$ph_since" ]; then say "BROKEN: no verified deployed version boundary for PostHog"; broken=1
@@ -296,10 +346,13 @@ case "$R" in
         fi
       fi
       fi
-    else say "BROKEN: required posthog signal helper missing or not executable — no capture signal read"; broken=1; fi;;
+    else say "BROKEN: required posthog signal helper missing or not executable — no capture signal read"; broken=1; fi
+    else say "capture watch skipped after RED deployment/route evidence — report production impact first"; fi;;
   netpilot-marketing)
     vercel_wait https://www.netpilot.io/;;
 esac
+# Slow health, main CI, Sentry and capture reads can overlap another machine's deploy.
+case "$R" in NetPilot-2-Backend|NetPilot-2-LB|netpilot-marketing) [ $red = 0 ] && [ $broken = 0 ] && [ $review = 0 ] && deployment_identity;; esac
 [ $outage = 1 ] && { say "RESULT: RED — production answers non-200 (health / route samples above): ROLL BACK first ($(dirname "$SLOT")/../../dependency-updates/scripts/revert-pr.sh, or git revert + self-merge; the platform rollback buys the minutes — deploy.md), then report"; exit 1; }
 # A failure next to an unread or unattributed impact signal is never called "no user impact" (Codex, skills PR#54)
 [ $red = 1 ] && [ $broken = 1 ] && { say "RESULT: RED — a deploy or main-run failure above AND a signal that could not be read (BROKEN line above): the impact is UNKNOWN — look by hand now; an outage or many users hit = roll back, else fix forward (deploy.md)"; exit 1; }

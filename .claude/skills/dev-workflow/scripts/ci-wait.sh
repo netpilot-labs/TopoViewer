@@ -37,7 +37,7 @@ echo "ci-wait: $repo#$pr head=$head since=${since:-newest}"
 appear=$(( $(date +%s) + APPEAR_MIN*60 )); ids=""
 while [ -z "$ids" ]; do
   ids=$(gh api "repos/$repo/actions/runs?head_sha=$head&event=pull_request&per_page=100" --paginate \
-       --jq ".workflow_runs | map(select(any(.pull_requests[]?; .number == $pr))) | map(select(.created_at >= \"${since}\")) | map(select(.conclusion != \"skipped\")) | map(.id) | unique | .[]" | tr '\n' ' ')
+       --jq ".workflow_runs | map(select(any(.pull_requests[]?; .number == $pr))) | map(select(.created_at >= \"${since}\")) | map(select(.conclusion != \"skipped\")) | map(.id) | unique | .[]" | tr '\n' ' ') || { echo "ci-wait: FINAL BROKEN rc=2 (initial run inventory unreadable)"; exit 2; }
   [ -n "$ids" ] && break
   [ $(date +%s) -gt $appear ] && { echo "ci-wait: no run minted in ${APPEAR_MIN} min — check mergeStateStatus, then close/reopen (merge.md, CI never ran)"; echo "ci-wait: FINAL BROKEN rc=3 (no run minted)"; exit 3; }
   sleep 15
@@ -52,7 +52,7 @@ while :; do
   expected_paths=$(read_expected) || { echo "ci-wait: cannot read the branch's run history — required set unknown"; echo "ci-wait: FINAL BROKEN rc=3 (history unreadable)"; exit 3; }
   # ONE read gives both the ids and the distinct workflow paths, so a break never leaves stale ids behind
   lines=$(gh api "repos/$repo/actions/runs?head_sha=$head&event=pull_request&per_page=100" --paginate \
-          --jq ".workflow_runs[]|select(any(.pull_requests[]?; .number == $pr))|select(.created_at >= \"${since}\")|select(.conclusion != \"skipped\")|\"\\(.id) \\(.path | split(\"@\")[0])\"" 2>/dev/null)
+          --jq ".workflow_runs[]|select(any(.pull_requests[]?; .number == $pr))|select(.created_at >= \"${since}\")|select(.conclusion != \"skipped\")|\"\\(.id) \\(.path | split(\"@\")[0])\"" 2>/dev/null) || { echo "ci-wait: FINAL BROKEN rc=2 (discovery run inventory unreadable)"; exit 2; }
   cur=$(printf '%s\n' "$lines" | awk 'NF{print $1}' | sort -u | tr '\n' ' ')
   have_paths=$(printf '%s\n' "$lines" | awk 'NF{$1=""; sub(/^ /,""); print}' | sort -u)
   [ -n "$cur" ] && ids="$cur"
