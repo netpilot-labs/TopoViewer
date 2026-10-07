@@ -13,7 +13,7 @@ The harness runs every command through a zsh `eval` on macOS; all of these are v
 - **Backticks in a double-quoted string or an unquoted heredoc are command substitution** — gh bodies, GraphQL `-f` strings and
   python edit scripts lose their code spans silently. Quoted heredoc (`<<'EOF'`) to a file, then `--body-file` / `-F var=@file`.
 - **zsh:** quote every URL with `?` and every glob-shaped flag value (`no matches found` reads as "no runs yet" in a loop);
-  `$var[` is subscript syntax; never `read` into `path` or assign `status`; an unquoted `$F` does not word-split — `while read -r`;
+  `$var[` is subscript syntax; never `read` into `path` or assign `status`; an unquoted `$F` does not word-split — `while read -r`; `read -a` is bash-only: split with `IFS=, read -rA arr` or `${(s:,:)var}`, and zsh arrays index from 1, so loop with `for x in "${arr[@]}"` rather than `${arr[0]}` (mkt #260–#275, 2026-10-07);
   `$pipestatus`, not `$PIPESTATUS`; `mktemp -d` with a glob in its template dies — resolve the path into a variable first;
   a word starting with `=` is `=cmd` expansion — `echo =====` dies (`===== not found`) and skips the rest of the chain.
 - **macOS:** no `timeout` — use the CLI's own bound, `perl -e 'alarm shift; exec @ARGV or exit 127' <sec> <cmd…>` (exit 142 at

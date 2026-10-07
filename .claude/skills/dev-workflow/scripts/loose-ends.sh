@@ -47,8 +47,10 @@ while [ $# -gt 0 ]; do case "$1" in
   *) echo "loose-ends.sh: unknown arg '$1'" >&2; exit 2;;
 esac; done
 for t in git gh jq perl; do command -v $t >/dev/null 2>&1 || { echo "loose-ends.sh: $t is not installed — nothing swept" >&2; exit 2; }; done
-S=$(cd "$(dirname "$0")" && pwd); ws=$(cd "$S/../../../.." && pwd); [ -d "$ws/NetPilot-2-Backend/.git" ] || ws=$(cd "$ws/.." && pwd)
+# pwd -P: invoked through the ~/agent-config symlink, a logical pwd walks up from /Users and the sweep scans the whole disk (2026-10-07, two 2 h runs)
+S=$(cd "$(dirname "$0")" && pwd -P); ws=$(cd "$S/../../../.." && pwd -P); [ -e "$ws/NetPilot-2-Backend/.git" ] || ws=$(cd "$ws/.." && pwd -P)
 ws=${WORKSPACE:-$ws}; ws=$(cd "$ws" 2>/dev/null && pwd -P) || { echo "loose-ends.sh: workspace root not found" >&2; exit 2; }
+[ -e "$ws/NetPilot-2-Backend/.git" ] || { echo "loose-ends.sh: $ws is not the multi-repo workspace root (no NetPilot-2-Backend/.git); set WORKSPACE" >&2; exit 2; }  # a .git FILE (linked worktree, separate git dir) counts
 # every network call is bounded: timeout, gtimeout, else a perl alarm (macOS ships neither of the first two)
 if command -v timeout >/dev/null 2>&1; then bounded() { timeout "$@"; }
 elif command -v gtimeout >/dev/null 2>&1; then bounded() { gtimeout "$@"; }
