@@ -91,7 +91,10 @@ against unreal actors come out. Then:
   what is structurally wrong, 2–4 alternatives with pros/cons, a recommendation. Honour a stated stopping rule the FIRST time.
 - **A SECOND finding on one heuristic is the signal to change the method, at round 2** — swap the heuristic for a quantity
   the code measures exactly, or a precondition check that falls back to the weaker true statement; one more caveat earns
-  the next finding (BE PR#958: 7 of 10 findings on one sentence; clab PR#266).
+  the next finding (BE PR#958: 7 of 10 findings on one sentence; clab PR#266). After decision (a) the same signal ends
+  the loop: a post-flip finding inside the mechanism just fixed that FAILS the exposure test is a residual, not another
+  fix — the fix-now categories above still fix, any round (BE PR#1008: five result-cap P2s fixed one per round, each fix
+  drawing the next, ~20 min a round).
 - **Merge right after the verdict while main is still the base; a rebase-only re-review runs under the cap decision already
   posted.** On a no-CI repo every rebase is a new head needing a fresh verdict, and a verdict on an UNCHANGED diff produces new
   findings each time (skills PR#180, 2026-10-07: 9 verdicts on 9 heads; two rebase-only re-requests brought 6 and 4 findings):

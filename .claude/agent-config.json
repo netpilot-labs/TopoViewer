@@ -213,7 +213,7 @@
     ".claude/skills/dev-workflow/review.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "76092f2f60529f0d04faaad1d9d8065256fdbeee1788af50e9f46715949210a2",
+      "sha256": "ac2a6f7d783f77df95951d7f28f5280ccd58208829625dd4af7d194faf443099",
       "source": "dev-workflow/review.md"
     },
     ".claude/skills/dev-workflow/screenshots.md": {
@@ -279,7 +279,7 @@
     ".claude/skills/dev-workflow/scripts/merge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "f996e54367a4686b7c69467329a61038d3d8224cf35233f323ea18395745084b",
+      "sha256": "4decfa3181ee9e36fcd09b9d05858fa120b0b8d08d62e4a4b0eee58642e9a7c9",
       "source": "dev-workflow/scripts/merge.sh"
     },
     ".claude/skills/dev-workflow/scripts/postmerge.sh": {
