@@ -23,7 +23,28 @@ case "$cmd" in
     gh api "repos/$OWNER/$R/dependabot/alerts/$n" --jq '"#\(.number) \(.dependency.package.name) state=\(.state) patched=\(.security_vulnerability.first_patched_version.identifier // "NONE")"';;
   resolvable) pkg=${1:?}
     [ -f uv.lock ] || { echo "run inside a uv repo (no uv.lock here)" >&2; exit 2; }
-    out=$(uv lock --upgrade-package "$pkg" --dry-run 2>&1); echo "$out" | tail -n +2
-    echo "$out" | grep -q 'No lockfile changes' && echo "BLOCKED: a cap holds $pkg — find it: uv tree --package $pkg --invert (ladder step 3)";;
+    # An unrelated stale lock can produce a change plan without moving this package.
+    # Require the baseline to be current before interpreting the upgrade dry run.
+    check=$(uv lock --check 2>&1); check_rc=$?
+    if [ "$check_rc" -ne 0 ]; then
+      printf '%s\n' "$check" >&2
+      echo "ERROR: current lockfile evidence unavailable for $pkg (uv check exit $check_rc)" >&2
+      exit "$check_rc"
+    fi
+    out=$(uv lock --upgrade-package "$pkg" --dry-run 2>&1); uv_rc=$?
+    if [ "$uv_rc" -ne 0 ]; then
+      printf '%s\n' "$out" >&2
+      echo "ERROR: resolution evidence unavailable for $pkg (uv exit $uv_rc)" >&2
+      exit "$uv_rc"
+    fi
+    printf '%s\n' "$out"
+    if grep -q 'No lockfile changes' <<<"$out"; then
+      echo "BLOCKED: no lockfile change for $pkg in this dry run — inspect: uv tree --package $pkg --invert (ladder step 3)"
+    elif grep -Eq '^Resolved [0-9]+ packages?' <<<"$out"; then
+      echo "RESOLVABLE: $pkg dry-run resolution succeeded"
+    else
+      echo "ERROR: unreadable dry-run resolution evidence for $pkg" >&2
+      exit 2
+    fi;;
   *) echo "unknown command $cmd" >&2; exit 2;;
 esac

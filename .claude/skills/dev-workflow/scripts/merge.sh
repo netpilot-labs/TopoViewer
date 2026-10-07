@@ -10,7 +10,8 @@
 #   1b Merge slot (real run): `merge-slot.sh acquire` — one merge per repo at a time on this machine, held
 #     through the deploy watch (merge-slot.sh carries the why and the rules). A dry run only reports it.
 #   2 Base check: compare main...head → behind_by == 0, else the carve-out: EVERY required
-#     workflow's (all but Vercel) latest run is green and was created AFTER main's tip commit
+#     workflow's (all but Vercel) latest run is green, its checkout merge parents prove the current
+#     default tip and PR head, and it was created AFTER main's tip commit
 #     (both UTC, from the API — a local-offset string compare merged a stale base, BE PR#842);
 #     within CARVEOUT_MARGIN_S = stale; and the gate in step 4 then runs with --since <main tip>.
 #     Stale → exit 1 "rebase and re-verify".
@@ -30,12 +31,27 @@ set -uo pipefail
 usage() { echo "usage: merge.sh <owner/repo> <pr> [--dry-run]" >&2; exit 2; }
 [ $# -eq 2 ] || [ $# -eq 3 ] || usage
 REPO=$1; PR=$2; DRY=0
+# The local checkout uses topoViewer; GitHub and the postmerge lease use TopoViewer.
+[ "$REPO" = netpilot-labs/topoViewer ] && REPO=netpilot-labs/TopoViewer
 case "${3:-}" in "") ;; --dry-run) DRY=1 ;; *) echo "merge.sh: unknown argument '$3' — refusing to guess on a merge command (PR #23 R3)" >&2; usage ;; esac
 [[ "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || usage; [[ "$PR" =~ ^[0-9]+$ ]] || usage
 CARVEOUT_MARGIN_S=60
 final() { echo "merge.sh: FINAL $1${DRYDRAFT:-}"; exit "$2"; }   # DRYDRAFT carries the draft caveat on EVERY dry-run exit
 SK="$(cd "$(dirname "$0")" && pwd)"          # resolved BEFORE leaving the caller's cwd
-TMPD=$(mktemp -d) || final "BROKEN mktemp failed (TMPDIR full or unavailable)" 2
+TOKEN=""; KEEP=0; MERGED=""
+TMPD=$(mktemp -d "${TMPDIR:-/tmp}/netpilot-merge.XXXXXXXX") || final "BROKEN mktemp failed (TMPDIR full or unavailable)" 2
+case "$TMPD" in /*) ;; *) TMPD="$PWD/$TMPD";; esac
+cleanup() {
+  local rc=$?
+  if [ -n "$TOKEN" ] && [ "$KEEP" = 0 ]; then "$SK/merge-slot.sh" release "$REPO" "$TOKEN" ${MERGED:+merged}; fi
+  # Only remove the private directory created by this invocation, including on dry-run failures.
+  cd / || return "$rc"
+  [ -n "$TMPD" ] && [ -d "$TMPD" ] && rm -rf -- "$TMPD"
+  return "$rc"
+}
+trap cleanup EXIT; trap 'exit 130' INT TERM
+RESOLVED_TMPD=$(cd "$TMPD" && pwd -P) || final "BROKEN cannot resolve private temporary directory" 2
+TMPD=$RESOLVED_TMPD
 cd "$TMPD" || final "BROKEN cannot cd to $TMPD" 2                   # never run `gh pr merge --delete-branch` inside a checkout: the local
                                               # cleanup fails there and the remote delete is silently skipped (FE#106, BE#287)
 
@@ -55,10 +71,8 @@ DEFAULT_BASE=$(gh api "repos/$REPO" --jq .default_branch 2>/dev/null) || final "
 [ "$MERGEABLE" = "MERGEABLE" ] || final "NOT MERGED mergeable=$MERGEABLE ($MSS) — resolve the conflict first" 1
 
 # 1b merge slot
-TOKEN=""; KEEP=0; MERGED=""
 if [ $DRY = 1 ]; then "$SK/merge-slot.sh" peek "$REPO" | sed 's/^/merge.sh: (dry-run) /'
 else
-  trap '[ -n "$TOKEN" ] && [ $KEEP = 0 ] && "$SK/merge-slot.sh" release "$REPO" "$TOKEN" ${MERGED:+merged}' EXIT; trap 'exit 130' INT TERM
   SLOT_OUT=$("$SK/merge-slot.sh" acquire "$REPO" "$PR") || final "NOT MERGED $SLOT_OUT" 1
   TOKEN=$SLOT_OUT
 fi
@@ -76,24 +90,29 @@ else
   # Every REQUIRED workflow (all but Vercel) must have its LATEST run green and newer than main's
   # tip — one fresh run of one workflow never vouches for the others (PR #23 R3).
   runs_json=$(gh api "repos/$REPO/actions/runs?head_sha=$HEAD&event=pull_request&per_page=50" \
-              --jq '[.workflow_runs[]|select(.name!="Vercel")]|group_by(.name)|map(sort_by(.created_at)|last)' 2>/dev/null)
+              --paginate --slurp 2>/dev/null | jq -c --argjson pr "$PR" '[.[].workflow_runs[]|select(.name!="Vercel")|select(any(.pull_requests[]?; .number == $pr))]|group_by(.workflow_id // (.path|split("@")[0]))|map(sort_by(.created_at,.id)|last)' 2>/dev/null)
   [ -n "$runs_json" ] || final "BROKEN cannot list runs on the head" 2
   total=$(printf '%s' "$runs_json" | python3 -c 'import json,sys; r=json.load(sys.stdin); print(len(r))')
-  okc=$(printf '%s' "$runs_json" | python3 -c 'import json,sys; r=json.load(sys.stdin); print(sum(1 for x in r if x.get("conclusion")=="success"))')
-  RUN_DATE=$(printf '%s' "$runs_json" | python3 -c 'import json,sys; r=json.load(sys.stdin); d=[x["created_at"] for x in r if x.get("conclusion")=="success"]; print(min(d) if d else "")')
+  okc=$(printf '%s' "$runs_json" | python3 -c 'import json,sys; r=json.load(sys.stdin); print(sum(1 for x in r if x.get("status")=="completed" and x.get("conclusion")=="success"))')
+  RUN_DATE=$(printf '%s' "$runs_json" | python3 -c 'import json,sys; r=json.load(sys.stdin); d=[x["created_at"] for x in r if x.get("status")=="completed" and x.get("conclusion")=="success"]; print(min(d) if d else "")')
   [ "${total:-0}" -gt 0 ] && [ "$okc" = "$total" ] && [ -n "$RUN_DATE" ] || final "NOT MERGED base is $BEHIND commit(s) behind $BASE and not every required workflow's latest run is green ($okc/$total) — rebase and re-verify" 1
   # The required SET is independent of this head's run list (required-workflows.sh): a required workflow
   # with no run on the current head is an event miss this head's run list cannot show (PR #23 R4).
   required=$("$SK/required-workflows.sh" "$REPO" "$PR") || final "BROKEN cannot read the required-workflow set — trust nothing" 2
-  expected_json=$(printf '%s\n' "$required" | python3 -c 'import json,sys; print(json.dumps(sorted({l.rstrip("\n").split("\t",1)[1] for l in sys.stdin if "\t" in l})))')
-  missing=$(printf '%s\n%s' "$runs_json" "$expected_json" | python3 -c 'import json,sys; a,b=sys.stdin.read().split("\n",1); have={x["name"] for x in json.loads(a)}; exp=json.loads(b) if b.strip() else []; print(", ".join(w for w in exp if w not in have))')
+  expected_json=$(printf '%s\n' "$required" | python3 -c 'import json,sys; print(json.dumps(sorted({l.rstrip("\n").split("\t",1)[0] for l in sys.stdin if "\t" in l})))')
+  missing=$(printf '%s\n%s' "$runs_json" "$expected_json" | python3 -c 'import json,sys; a,b=sys.stdin.read().split("\n",1); have={x["path"].split("@",1)[0] for x in json.loads(a)}; exp=json.loads(b) if b.strip() else []; print(", ".join(w for w in exp if w not in have))')
   [ -z "$missing" ] || final "NOT MERGED base is $BEHIND behind and required workflow(s) minted no run on this head: $missing — close/reopen (merge.md, CI never ran), then re-verify" 1
   to_epoch() { python3 -c "import sys,datetime;print(int(datetime.datetime.fromisoformat(sys.argv[1].replace('Z','+00:00')).timestamp()))" "$1" 2>/dev/null; }
   run_s=$(to_epoch "$RUN_DATE"); main_s=$(to_epoch "$MAIN_DATE")
   # an empty conversion is 0 to bash arithmetic and would PASS the carve-out (PR #23 R3): validate both
   [[ "$run_s" =~ ^[0-9]+$ ]] && [[ "$main_s" =~ ^[0-9]+$ ]] || final "BROKEN cannot parse run date '$RUN_DATE' or $BASE tip date '$MAIN_DATE' — trust nothing" 2
   if [ $(( run_s - main_s )) -gt $CARVEOUT_MARGIN_S ]; then
-    echo "merge.sh: base check — $BEHIND behind, CARVE-OUT applies: oldest of the $total required workflows' latest green runs ($RUN_DATE) is newer than $BASE tip $MAIN_DATE (UTC compare)"
+    # Embedded committer time is not ref-update time (an old commit can be fast-forwarded today).
+    # Require immutable checkout ancestry for every successful job; expired/unsupported logs
+    # conservatively require rebase, while the proven Lin carve-out remains available.
+    printf '%s' "$runs_json" > "$TMPD/checkout-runs.json"
+    python3 "$SK/merge-checkout-proof.py" "$REPO" "$PR" "$HEAD" "$MAIN_TIP" "$TMPD/checkout-runs.json" || final "NOT MERGED base is $BEHIND behind and CI checkout ancestry is unproven — rebase and re-verify" 1
+    echo "merge.sh: base check — $BEHIND behind, CARVE-OUT applies: oldest of the $total required workflows' latest green runs ($RUN_DATE) has proven current-base checkout ancestry and is newer than $BASE tip $MAIN_DATE (UTC compare)"
     GATE_SINCE="$MAIN_DATE"   # the gate below must also see only runs newer than main's tip
   else
     final "NOT MERGED base is $BEHIND behind and a required workflow's latest green run ($RUN_DATE) is not newer than $BASE tip ($MAIN_DATE) — rebase and re-verify CI + Codex" 1
@@ -111,9 +130,9 @@ else
 fi
 
 # 4 the two gates
-if [ -n "$GATE_SINCE" ]; then "$SK/pr-gates.sh" "$PR" --repo "$REPO" --since "$GATE_SINCE" > /tmp/merge-gate.$$ 2>&1; rc=$?
-else "$SK/pr-gates.sh" "$PR" --repo "$REPO" > /tmp/merge-gate.$$ 2>&1; rc=$?; fi
-grep -E '^(READY|NOT READY|BROKEN)' /tmp/merge-gate.$$ | head -1; rm -f /tmp/merge-gate.$$
+if [ -n "$GATE_SINCE" ]; then "$SK/pr-gates.sh" "$PR" --repo "$REPO" --since "$GATE_SINCE" > "$TMPD/merge-gate" 2>&1; rc=$?
+else "$SK/pr-gates.sh" "$PR" --repo "$REPO" > "$TMPD/merge-gate" 2>&1; rc=$?; fi
+grep -E '^(READY|NOT READY|BROKEN)' "$TMPD/merge-gate" | head -1; rm -f "$TMPD/merge-gate"
 [ $rc -eq 0 ] || final "NOT MERGED pr-gates rc=$rc" $([ $rc -eq 2 ] && echo 2 || echo 1)
 [ $DRY = 1 ] && final "DRY-RUN ok — steps 1–4 pass on head ${HEAD:0:10}" 0
 
@@ -128,12 +147,17 @@ fi
 # 6 merge + assert; the merge oid can lag state=MERGED by a few seconds (PR #23 R1 P2)
 # The slot must still be OURS (a run paused past the stale limit was taken over). EVERY repo keeps it from BEFORE the
 # merge call — an interrupt mid-call can leave a merge GitHub already accepted — and gives it back only on a proven
-# outcome: not merged, or merged in a repo with no deploy watch (skills PR#55).
+# outcome: not merged, or a subsequent clean postmerge check for every known repository.
 "$SK/merge-slot.sh" check "$REPO" "$TOKEN" || { TOKEN=""; final "NOT MERGED this run's merge slot was taken over (paused past the stale limit?) — re-run from --dry-run" 1; }
-WATCH=0; case "${REPO#*/}" in NetPilot-2-Backend|NetPilot-2-LB|NetPilot-2-Frontend|netpilot-marketing) WATCH=1;; esac
+WATCH=0; case "$REPO" in lz-networks/NetPilot-2-Backend|lz-networks/NetPilot-2-LB|lz-networks/NetPilot-2-Frontend|lz-networks/netpilot-marketing|netpilot-labs/containerlab-mcp|lz-networks/netpilot-skills|lz-networks/netpilot-probe-lab|lz-networks/netpilot-devops|lz-networks/netpilot-dev|lz-networks/netpilot-lead-desk|lz-networks/netpilot-support-desk|lz-networks/netpilot-marketing-monitor|lz-networks/3rd-party-apps|netpilot-labs/TopoViewer) WATCH=1;; esac
 KEEP=1
-gh pr merge "$PR" -R "$REPO" --squash --delete-branch --match-head-commit "$HEAD" > /tmp/merge-out.$$ 2>&1; rc=$?
-cat /tmp/merge-out.$$; rm -f /tmp/merge-out.$$
+# Vercel protection checks the production push actor as well as commit identity.
+# Read-only gates retain the caller identity; production merges use the machine keyring.
+(
+  case "$REPO" in lz-networks/NetPilot-2-Frontend|lz-networks/netpilot-marketing) unset GH_TOKEN GITHUB_TOKEN;; esac
+  gh pr merge "$PR" -R "$REPO" --squash --delete-branch --match-head-commit "$HEAD"
+) > "$TMPD/merge-out" 2>&1; rc=$?
+cat "$TMPD/merge-out"; rm -f "$TMPD/merge-out"
 if [ $rc -ne 0 ]; then
   st=$(gh pr view "$PR" -R "$REPO" --json state --jq .state 2>/dev/null)
   case "$st" in
@@ -151,12 +175,12 @@ for i in 1 2 3 4 5 6 7 8; do
 done
 [ "$MSTATE" = "MERGED" ] || final "BROKEN merge command returned 0 but state=$MSTATE" 2
 [ "${#MOID}" = 40 ] || final "BROKEN merged but no 40-char merge oid after 40 s — read it by hand" 2
-[ $WATCH = 1 ] && { "$SK/merge-slot.sh" sha "$REPO" "$TOKEN" "$MOID"; echo "merge.sh: merge slot for $REPO stays held until \`postmerge.sh ${REPO#*/} $MOID\` ends clean (merge-slot.sh)"; }
+[ $WATCH = 1 ] && { "$SK/merge-slot.sh" sha "$REPO" "$TOKEN" "$MOID" || final "BROKEN merged as $MOID but the merge-slot SHA could not be recorded; reconcile the held slot before deploy watch or another merge" 2; echo "merge.sh: merge slot for $REPO stays held until \`postmerge.sh ${REPO#*/} $MOID\` ends clean (merge-slot.sh)"; }
 MP1=$(gh api "repos/$REPO/commits/$MOID" --jq '.parents[0].sha' 2>/dev/null)
 # a base that moved inside the window keeps the slot in EVERY repo (the sha recorded, so postmerge.sh can settle it): in a
 # no-watch repo too, nothing else merges until main is verified (Codex, skills PR#60)
-[ "$MP1" = "$TIP2" ] || { [ $WATCH = 0 ] && "$SK/merge-slot.sh" sha "$REPO" "$TOKEN" "$MOID"; echo "merge.sh: WARNING — merge commit's parent ${MP1:0:10} != the base tip checked seconds earlier ${TIP2:0:10}: main advanced inside the window; verify main's CI / revert per deploy.md — the merge slot stays held until \`postmerge.sh ${REPO#*/} $MOID\`"; final "BROKEN merged onto a base that moved inside the window; merge oid $MOID" 2; }
-[ $WATCH = 0 ] && { KEEP=0; MERGED=1; }   # proven merged on the checked base, no deploy watch to wait for: released at exit — and an acknowledged hold with it
+[ "$MP1" = "$TIP2" ] || { if [ $WATCH = 0 ]; then "$SK/merge-slot.sh" sha "$REPO" "$TOKEN" "$MOID" || final "BROKEN merged as $MOID but the merge-slot SHA could not be recorded; reconcile the held slot before deploy watch or another merge" 2; fi; echo "merge.sh: WARNING — merge commit's parent ${MP1:0:10} != the base tip checked seconds earlier ${TIP2:0:10}: main advanced inside the window; verify main's CI / revert per deploy.md — the merge slot stays held until \`postmerge.sh ${REPO#*/} $MOID\`"; final "BROKEN merged onto a base that moved inside the window; merge oid $MOID" 2; }
+[ $WATCH = 0 ] && { KEEP=0; MERGED=1; }   # proven merged on the checked base, unknown repository without a configured postmerge watch: released at exit — and an acknowledged hold with it
 final "MERGED $MOID" 0
 }
 main "$@"

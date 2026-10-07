@@ -36,7 +36,10 @@ report format); `scripts/lane-audit.sh` checks the lanes' leftovers afterwards (
   comment is Codex's AND older than ~15 min; younger fires on every round). Use git-tracked source mtimes, not the whole tree
   (clab#45, FE#216).
 - **Nudge before you take over:** a precise SendMessage naming the remaining steps restarts a stalled lane in one round; take
-  over only when unanswered, after a same-minute re-check.
+  over only when unanswered, after a same-minute re-check. A lane that merged but never started `postmerge.sh` is dead at the
+  threshold above (the slot is held, the deploy unwatched); one whose watch ended and then shows no tool call for over an hour
+  on the cleanup tail gets that ONE message; still idle → stop it (TaskStop) and finish the tail yourself — worktree, branches,
+  the learning-pass comment — reporting the main-checkout state (4 of 10 lanes, 2026-10-07).
 - **ONE actor commits per worktree.** Stop the agent before committing its tree — a committer captures whatever is on disk,
   including a mutation proof mid-flight (FE#216).
 - A repo-specific "clean pass = 👍" note narrows what you EXPECT, never what you CHECK — `pr-gates.sh` on every repo.
