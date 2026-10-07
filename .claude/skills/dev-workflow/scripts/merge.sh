@@ -153,15 +153,20 @@ WATCH=0; case "$REPO" in lz-networks/NetPilot-2-Backend|lz-networks/NetPilot-2-L
 KEEP=1
 # Vercel protection checks the production push actor as well as commit identity.
 # Read-only gates retain the caller identity; production merges use the machine keyring.
+# GitHub answers a MERGEABLE/CLEAN PR with HTTP 500 "Something went wrong while executing your query" on every merge
+# path for minutes at a time, with no incident posted (BE PR#1008, 2026-10-07: 16:53–17:03Z; a retry 10 min later merged
+# first try) — and the same text is what an installation token gets persistently (gh cli#7213; a PAT merges). Never the
+# PR. No wait loop HERE: a wait inside this step would reopen every check above (base, gates, slot; PR #201 R1) — the
+# NOT MERGED line names both readings and the operator re-runs merge.sh from the top.
 (
   case "$REPO" in lz-networks/NetPilot-2-Frontend|lz-networks/netpilot-marketing) unset GH_TOKEN GITHUB_TOKEN;; esac
   gh pr merge "$PR" -R "$REPO" --squash --delete-branch --match-head-commit "$HEAD"
 ) > "$TMPD/merge-out" 2>&1; rc=$?
-cat "$TMPD/merge-out"; rm -f "$TMPD/merge-out"
+cat "$TMPD/merge-out"; gh500=0; grep -q "Something went wrong while executing your query" "$TMPD/merge-out" && gh500=1; rm -f "$TMPD/merge-out"
 if [ $rc -ne 0 ]; then
   st=$(gh pr view "$PR" -R "$REPO" --json state --jq .state 2>/dev/null)
   case "$st" in
-    OPEN|CLOSED) KEEP=0; final "NOT MERGED gh pr merge rc=$rc (state=$st)" 1;;
+    OPEN|CLOSED) KEEP=0; final "NOT MERGED gh pr merge rc=$rc (state=$st)$([ $gh500 = 1 ] && echo " — GitHub answered 'Something went wrong' (a transient 500, or a token-specific failure: gh cli#7213 with an installation token): not the PR; re-run merge.sh (from --dry-run) in 5-10 min, and if it persists check the credential (a PAT)")" 1;;
     MERGED) echo "merge.sh: gh pr merge rc=$rc but the PR reads MERGED — continuing";;
     *) final "BROKEN gh pr merge rc=$rc and the PR state is unreadable ('$st') — read it by hand; the merge slot stays held" 2;;
   esac
