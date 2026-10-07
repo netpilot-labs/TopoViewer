@@ -56,8 +56,8 @@ learning pass's charter), `db-access` (read-only checks such as Neon's Postgres 
 - **Durable, improves every pass:** this skill's files, at the CANONICAL path
   (`<workspace>/.claude/skills/dependency-updates/`). A consumer (the DevOps loop) edits
   the canonical copy, never its vendored one — sync refuses unrecorded local edits by the next
-  sync (`skill-maintenance`). Commit + push + `sync-all.sh` closes every pass that
-  changed a file.
+  sync (`skill-maintenance`). Ship changes through the canonical source’s reviewed
+  `dev-workflow`, then synchronize affected consumers via their reviewed PRs (learning.md §1).
 - **Cross-pass state is NOT a skill file** — it is the consumer's, at
   `netpilot-devops/ledgers/` (from that repo: `ledgers/dependency-updates.md`). Write it
   in place; there is nothing to push upstream and nothing a sync can revert. Provenance for
@@ -116,8 +116,8 @@ Dependency pass:
         `WATCHES.md` so every 2-hourly pass re-checks them. At the closeout pass (Where it
         runs) a mergeable PR still open is a desk line naming why — never a silent carry.
 - [ ] 8. LEARNING PASS (learning.md) — before the report, not after.
-- [ ] 9. Report (exemplar in learning.md). Canonical repo committed, pushed, synced;
-        `git status` clean.
+- [ ] 9. Report (exemplar in learning.md): source PR/merged SHA and affected consumer
+        PRs/status; owned worktrees clean, with any held lane named explicitly.
 ```
 
 ## Tiers in one screen (detail and rationale: `tiers.md`)

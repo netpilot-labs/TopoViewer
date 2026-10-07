@@ -144,7 +144,10 @@ application runtime bundles, and upstream repositories retain their existing own
 **Ship duty:** use a branch in a scratch clone, PR + Codex review + checks, then merge per
 `dev-workflow`; never switch the live source checkout’s branch. Pull the canonical checkout
 with `git pull --ff-only`, run `sync-all.sh`, and ship generated changes through PRs in the
-consumers. Sync refuses unrecorded edits rather than discarding them; move a verified local
+consumers. `sync-all.sh` rewrites every consumer's MAIN checkout: run it only after the previous
+wave's `lane-audit.sh` and cleanup, or a lane still reconciling its merged generated file sees
+its byte-check fail by design (2026-10-07: run after skills PR#180 with four lanes in cleanup).
+Sync refuses unrecorded edits rather than discarding them; move a verified local
 change into its mapped source first. New personal skills use `scripts/agent-config.py personal`
 to link the same folder into both hosts. Retired `signature-provisioning` is replaced by
 `vm-onboarding` and `contract-onboarding` (Lin, 2026-09-16).

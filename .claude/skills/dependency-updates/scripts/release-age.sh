@@ -14,10 +14,20 @@ case "$eco" in
   *) echo "eco must be pypi or npm" >&2; exit 2;;
 esac
 [ -z "$ts" ] && { echo "no upload time for $pkg@$ver on $eco" >&2; exit 2; }
-d=${ts%%T*}
-t0=$(date -j -f %Y-%m-%d "$d" +%s 2>/dev/null || date -d "$d" +%s)
-age=$(( ( $(date +%s) - t0 ) / 86400 ))
-echo "$pkg@$ver published $d — ${age}d old (min $MIN_AGE_DAYS)"
+age=$(python3 - "$ts" "$(date +%s)" <<'PYTIME'
+import datetime, sys
+try:
+    published = datetime.datetime.fromisoformat(sys.argv[1].replace("Z", "+00:00"))
+    if published.tzinfo is None:
+        raise ValueError("timezone missing")
+    now = datetime.datetime.fromtimestamp(int(sys.argv[2]), datetime.timezone.utc)
+    print((now - published).days)
+except (ValueError, OverflowError) as error:
+    print(f"invalid upload time: {error}", file=sys.stderr)
+    sys.exit(2)
+PYTIME
+) || exit 2
+echo "$pkg@$ver published $ts — ${age}d old (min $MIN_AGE_DAYS)"
 if [ "$age" -lt "$MIN_AGE_DAYS" ]; then
   if [ "$sec" = --security ]; then echo "younger than the cooldown; allowed: security-driven"; exit 0; fi
   echo "BLOCKED: younger than the cooldown — wait, or pass --security when a CVE drives the bump"; exit 1

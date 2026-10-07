@@ -17,12 +17,15 @@ pass follows the same rule). The script's `RESULT` line names which signal fired
   test is read first (`gh run view <id> -R <o>/<r> --log-failed`); in a suite the merged diff cannot reach, with the PR's run
   green on the same tree, re-run it (`gh run rerun <id> -R <o>/<r> --failed`) and re-run `postmerge.sh` (BE PR#942: a 1.0 s
   wall-clock bound read 1.026 s on a Markdown-only merge).
-**Repos without a deploy on merge** (containerlab-mcp, netpilot-skills, netpilot-probe-lab): `postmerge.sh` prints ONE
-`RESULT: no deploy on merge` line with the `main` push runs for the sha (read once — follow any not yet green) and exits 0;
-it records no hold, and frees one already kept for that sha only when those runs are all green (or the repo has no
-workflows). Then the repo's own step: containerlab-mcp — none
-(its release is tag-gated; merge.md); netpilot-skills — `sync-all.sh` + a commit in each consumer it changed
-(skill-maintenance ship duty), and confirm both consumers read current.
+**Repos without a deploy on merge:** `postmerge.sh` retains the exact merge's slot through a bounded
+25-minute check of the actual default branch's push workflows and required jobs. It accepts only completed/success
+runs on that SHA after the three-minute workflow-discovery interval; missing/pending evidence times out BROKEN,
+terminal failures are RED, and unreadable or unsupported workflow policy is BROKEN. A repository with no workflows
+settles clean immediately. For containerlab-mcp the required push workflow is `test.yml` (release packaging is tag-gated);
+TopoViewer uses `ci.yml` on its actual default branch, and netpilot-probe-lab uses `probe-lab-checks.yml`.
+Both `topoViewer` and `TopoViewer` settle the same `netpilot-labs/TopoViewer` slot. Then the repo's own step:
+containerlab-mcp — no release on merge; netpilot-skills — synchronize configuration snapshots and commit changed
+consumers (skill-maintenance ship duty), confirming both hosts read the current source.
 
 ## Rules for any watcher you write by hand
 - **Self-test the status source first and fail LOUDLY** (`exit 2 WATCHER-BROKEN`); N consecutive empty/error reads mid-loop =

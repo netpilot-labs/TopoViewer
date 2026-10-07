@@ -30,6 +30,12 @@ The harness runs every command through a zsh `eval` on macOS; all of these are v
   <name> | wc -l)" = 0 ]` matches its own command line and never ends — wait on a PID or a marker file (board 31 sweep).
 - **`bash -n` does not parse a script embedded in a heredoc** — an apostrophe inside a single-quoted awk program broke the
   embedded file while the outer check stayed green; give every embedded script its own `bash -n` (clab PR#266).
+- **`git diff --quiet <ref> -- <path>` reads an UNTRACKED file as deleted, whatever its bytes** (exit 1 on an identical file:
+  the working-tree side comes through the index). Byte-check a generated or not-yet-added file against the merged version by
+  blob id — no temp file, no pipe, `--no-filters` so a CRLF/clean filter cannot hash converted bytes:
+  `h=$(git hash-object --no-filters <path>) || exit 1; [ "$(git rev-parse -q --verify <ref>:<path>)" = "$h" ] || exit 1` (a
+  missing ref path yields an empty string, never a match; a bare `git show … | cmp -s - <path>` reports a MATCH when the ref
+  is unreadable and the local file empty) (the ten consumer-snapshot lanes, 2026-10-07; Codex R1–R6).
 - **Never hand-type a 40-char oid** — capture it (`git rev-parse HEAD`, `--json headRefOid`) (FE#309, BE#410).
 - **`gh issue view <n> --comments` in this non-TTY harness prints the comments WITHOUT the issue body, and nothing at all
   (exit 0) for an issue that has no comment** — it reads like a failed fetch or an empty issue. Read an issue with

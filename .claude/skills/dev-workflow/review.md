@@ -19,7 +19,8 @@ Contents: the loop · reading the verdict · disposition (exposure test, the fou
    `gh pr view --json headRefOid` reads the pushed SHA: the API lagged ~40 s and armed a stale head three times
    (BE PR#915, 2026-09-29).
 3. Triage each finding (below), push fixes, then reply + resolve with `scripts/pr-threads.py <owner/repo> <pr> <sha> replies.json`
-   (`--dry-run` lists thread ids) — only after `git diff --stat HEAD~1` lists every file the replies claim.
+   (`pr-threads.py <owner/repo> <pr> --dry-run` — two args, no sha, no replies path — lists thread ids) — only after
+   `git diff --stat HEAD~1` lists every file the replies claim.
 4. `pr-gates.sh <n>` READY = verdict on head + 0 unresolved + CI green (+ latest request answered, non-draft). READY means
    dispositioned, never zero findings — read the substance. **A clean pass never retracts an open finding from an earlier pass on
    the same head**; two passes on one head can disagree — trust the open thread (BE#308).
@@ -91,6 +92,11 @@ against unreal actors come out. Then:
 - **A SECOND finding on one heuristic is the signal to change the method, at round 2** — swap the heuristic for a quantity
   the code measures exactly, or a precondition check that falls back to the weaker true statement; one more caveat earns
   the next finding (BE PR#958: 7 of 10 findings on one sentence; clab PR#266).
+- **Merge right after the verdict while main is still the base; a rebase-only re-review runs under the cap decision already
+  posted.** On a no-CI repo every rebase is a new head needing a fresh verdict, and a verdict on an UNCHANGED diff produces new
+  findings each time (skills PR#180, 2026-10-07: 9 verdicts on 9 heads; two rebase-only re-requests brought 6 and 4 findings):
+  leak-path or correctness-breaking findings are fixed, the rest dispositioned on the PR under that decision exactly as any
+  round's findings are (Disposition above; `pr-gates.sh` reads it) — never a new open-ended round.
 **Fork ownership** (Lin, 2026-09-19; default mode — under full delegation the agent decides inside its scope, SKILL.md
 Delegation modes; a cross-phase scope move stays his in both modes, `project-management` Scope discipline): the TICKET's owner decides. A loop-owned item decides itself when the surface is off the
 never-auto list, the redesign diff sits inside the loop's intake gate (risk ≤ 25 / confidence ≥ 85), and no user-visible policy is added. Lin decides never-auto surfaces, p1/p2 user-visible policy, lane changes;

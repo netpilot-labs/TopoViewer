@@ -55,7 +55,7 @@ first (clab#40).
 The script reads the base, the carve-out and the merge ref from the API (its header carries each why); chaining check and
 merge by hand in one line merged stale bases three times (FE PR#247, #276, BE PR#528). What its `FINAL` lines ask of you:
 - **"rebase and re-verify"** — main moved and the carve-out (Lin, 2026-08-07: every required run green AND created after
-  main's tip) does not hold: rebase, then CI + Codex again, even with no file overlap (CI builds the merge commit; `CLEAN
+  main's tip, with successful jobs' immutable checkout commit parents proving the current default tip and exact PR head) does not hold: rebase, then CI + Codex again, even with no file overlap (CI builds the merge commit; `CLEAN
   MERGEABLE` never meant up to date). Lockfile PR: rebuild on current main, `pnpm install --frozen-lockfile` on that tree.
 - **"stale merge ref"** — GitHub has not recomputed `refs/pull/<n>/merge` since a sibling merge: close/reopen, then re-verify
   (FE#489, BE PR#803). `mergeable=UNKNOWN` is that recompute still running — re-run in a moment (BE PR#935).
@@ -66,6 +66,8 @@ merge by hand in one line merged stale bases three times (FE PR#247, #276, BE PR
   agents merging in one repo from two machines, sequence those merges yourself (each waits for the other's watch).
 - **Any PR carrying a migration:** `uv run alembic heads` on the rebased branch prints ONE head, and Neon's `alembic current`
   equals the new `down_revision`; else re-point it (BE PR#716 + #719 forked the chain).
+
+The carve-out reads the selected run attempt's successful checkout logs and verifies the recorded merge commit's two Git parents. Step display names do not supply proof. Missing or expired logs, unsupported checkout output, multiple checkout commits or different parents require rebase. A timestamp alone never proves the tested base.
 
 ## Merging — `merge.sh o/n <pr>`
 - **The script is the only merge command:** it merges from outside any checkout with the full head oid and asserts `MERGED`
@@ -79,6 +81,8 @@ merge by hand in one line merged stale bases three times (FE PR#247, #276, BE PR
   (`Closes #944` / `Fixes #944`, or `owner/repo#944` cross-repo) — our `BE#`/`FE#` shorthand is NOT a
   valid closing keyword** (`Fixes BE#944` links/closes nothing): the issue stays OPEN after merge. Verify
   each linked issue actually closed and close by hand if the auto-close missed (BE#944/#945, 2026-10-01).
+
+Known repositories retain their recorded merge slot until the canonical postmerge check ends clean, including repositories with no deployment. If GitHub has merged but recording the SHA fails, the helper reports BROKEN and keeps the hold for reconciliation; it cannot undo a remote merge by pretending that local write succeeded. Its private temporary directory is removed on both dry-run and real exits.
 
 ## Migrations at merge — the agent's own in default mode since 2026-10-04 (SKILL.md Delegation modes)
 Additive/data migrations: apply to Neon BEFORE merge (new code needs the schema). DROP migrations on tables the deployed code

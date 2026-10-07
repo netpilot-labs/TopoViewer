@@ -26,7 +26,7 @@ pass.
 | `dashboard.sh <repo> show\|tick "<marker>"` | Dependency Dashboard checkboxes | 5 |
 | `alert.sh <repo> show\|dismiss\|reopen …` | alert state changes with the reason/comment guards | 7 |
 | `revert-pr.sh <repo> <pr> "<signal>"` | worktree + revert commit + non-draft PR + Codex request | 9 |
-| `merge.sh <repo> <owner> <pr> [<worktree>] [--wait-codex]` | the merge step executed: worktree removed → at-merge base check (head contains main; workflow-only Renovate PRs may be behind if MERGEABLE/CLEAN) → `pr-gates.sh` → squash-merge → `postmerge.sh`; containerlab-mcp has no deploy to watch | 5 |
+| `merge.sh <repo> <owner> <pr> [<worktree>] [--wait-codex]` | delegates gates/base/slot and squash-merge to canonical dev-workflow, then runs canonical postmerge for every repo; retains the worktree for authorized cleanup only after completion | 5 |
 | `posthog-signal.sh [--window 15m]` | app capture still flowing after a deploy (HogQL count via the PostHog Query API; `POSTHOG_PERSONAL_API_KEY` scope `query:read` + `POSTHOG_PROJECT_ID` + `POSTHOG_HOST` in netpilot-devops/.env, copied from the lead desk 2026-09-10 — the frontend's phc_ token is write-only); exit 1 = REVIEW, 2 = not configured | 8 |
 | `<skills>/dev-workflow/scripts/postmerge.sh <repo> <merge-sha>` (moved there, board 30) | the §8 signals executed: deploy success (Railway/Vercel), health or route load, backend `main` run, Sentry new groups; exit 1 = RED (impact decides, `dev-workflow/deploy.md`) | 5, 8 |
 
@@ -51,7 +51,7 @@ automatic review (BE#507 sat 22 days with zero reviews).
 
 ```bash
 gh pr edit $N --repo $O/$R --add-label origin/devops --add-label agent/<auto|hold>   # adoption labels (ratified 2026-09-09)
-gh pr comment $N --repo $O/$R --body "@codex review"
+env -u GH_TOKEN -u GITHUB_TOKEN gh pr comment $N --repo $O/$R --body "@codex review"
 <skills>/dev-workflow/scripts/pr-gates.sh $N --repo $O/$R --watch          # the Codex half
 t=$(date -u +%Y-%m-%dT%H:%M:%SZ); gh pr ready $N --repo $O/$R          # hand PRs only; Renovate PRs are already non-draft
 <skills>/dev-workflow/scripts/ci-wait.sh $N --repo $O/$R --since "$t"       # the CI half, then pr-gates again
@@ -72,11 +72,13 @@ created, so the merge-commit carve-out did not apply).
   head (the pre-rebase request is void). Provenance: pass-688 (2026-09-14) ticked BE#776 +
   FE#525, both rebased + merged clean ~10 min later, inside the Monday window. (And every
   merge in a repo re-stales the OTHER open PRs there — the next one needs its own rebase tick.)
-- Merge with `scripts/merge.sh` (it removes the worktree first, runs the at-merge base
-  check and the gate, squash-merges with `--delete-branch`, then `postmerge.sh`; it takes the repo's merge slot, shared
-  with dev-workflow's `merge.sh` — after a non-clean watch the next merge there runs with `MERGE_SLOT_ACK=<that pr>` once
-  the result is dispositioned, dev-workflow `merge.md`). No bare `gh pr merge` — it skips the slot: when this script
-  cannot run, merge with dev-workflow's `merge.sh <o/r> <pr>` (base check, gate and slot included).
+- Merge with `scripts/merge.sh`: it delegates to canonical dev-workflow's merge gates,
+  base proof and slot, then runs canonical postmerge for EVERY repo, including required
+  main-push CI on no-deploy repos. A failed or pending watch returns nonzero; retain the
+  worktree until completion and authorized cleanup. After a non-clean watch, the next
+  merge uses `MERGE_SLOT_ACK=<that pr>` only once its result is dispositioned
+  (`dev-workflow/merge.md`). No bare `gh pr merge`; if the wrapper cannot run, use
+  dev-workflow's `merge.sh <o/r> <pr>` and its required postmerge completion.
 - **Sibling lockfile PRs in one repo are rebuilt, never textually merged**: after any merge
   that touched the lockfile, the next PR is reset onto `main`, its edits re-applied, relocked,
   `pnpm install --frozen-lockfile` verified on that tree, and its re-verify run minted ≥2 min
@@ -229,7 +231,7 @@ back vs fix forward); Sentry groups it prints are for the pass to attribute.
 |---|---|---|
 | Backend | Railway rollout + `/health` 200 | the `main` push run's **API Integration Tests (Real Clerk Auth)** job — it runs on `main` only (no `workflow_dispatch` trigger exists), so it is the FIRST time an auth-touching dep is exercised by CI; red → §9. Sentry backend: no new issue groups in +60 min. Scheduler service restarted clean (same image) |
 | Frontend / Marketing | Vercel deployment `success` + one route load (`/sign-in` for app, `/` for marketing). The app's `version.json` carries `version` (sha — what this watch reads) and `assetHash` (what the refresh toast reads; identical across deploys that ship the same client code, FE PR#497) | Sentry frontend: no new groups +60 min; `scripts/posthog-signal.sh` (HogQL event count over the last 15 min; runs inside `postmerge.sh`; live since 2026-09-10) |
-| containerlab-mcp | none on merge — ships with the next tagged release (`golden-image` owns the fleet) | the release workflow on the PR (proves the build) |
+| containerlab-mcp | no deployment on merge — ships with the next tagged release (`golden-image` owns the fleet) | required main-push workflows and named jobs complete successfully before the next merge |
 | LB | Railway (a tag bump IS the deploy; T4 — `haproxy -c` in the new image first, in the window) | CORS preflight (deploy.md, CORS) + sticky-cookie sanity, immediately; revert = previous tag |
 
 Server-stack bumps on the backend (`uvicorn`, `fastapi`, `starlette`, `sse-starlette`,

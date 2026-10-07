@@ -8,9 +8,46 @@ set -uo pipefail
 SK="$(cd "$(dirname "$0")" && pwd)"; S="$SK/merge-slot.sh"; PM="$SK/postmerge.sh"
 T=$(mktemp -d) || exit 2; trap 'rm -rf "$T"' EXIT
 export MERGE_CLAIM_DIR="$T/claims"; mkdir -p "$T/bin"
-# stub gh: "which PR does this sha belong to" answers 7; the workflow count and the push runs come from STUB_WF / STUB_RUNS
-# and the merge commit's date from STUB_DATE (default: long ago)
-printf '#!/bin/sh\ncase "$*" in *commits/*/pulls*) echo 7;; *actions/workflows*) echo "${STUB_WF:-0}";; *actions/runs*) printf "%%s" "${STUB_RUNS:-}";; *commits/*) echo "${STUB_DATE:-2026-01-01T00:00:00Z}";; esac\nexit 0\n' > "$T/bin/gh"; chmod +x "$T/bin/gh"; export PATH="$T/bin:$PATH"
+# Stub the actual REST shapes consumed by postmerge and its named-job helper.
+# A private clock advances across the bounded wait, so missing/pending CI is
+# exercised without a real 25-minute sleep. No external API or real slot is used.
+cat > "$T/bin/gh" <<'PYGH'
+#!/usr/bin/env python3
+import json, os, sys
+args=' '.join(sys.argv[1:]); sha='a'*40
+if 'commits/' in args and '/pulls' in args: print(7)
+elif 'actions/workflows' in args: print(os.environ.get('STUB_WF','0'))
+elif 'actions/runs/' in args and '/jobs' in args:
+    names=['lint','security','type-check','unit-tests','integration-tests']
+    print(json.dumps([{'jobs':[{'name':n,'head_sha':sha,'status':'completed','conclusion':'success'} for n in names]}]))
+elif 'actions/runs' in args:
+    state=os.environ.get('STUB_RUNS','')
+    rows=[]
+    if state:
+        status='in_progress' if 'in_progress' in state else 'completed'
+        conclusion=None if status!='completed' else ('failure' if 'failure' in state else 'success')
+        rows=[{'id':10,'path':'.github/workflows/test.yml','head_sha':sha,'head_branch':'main','event':'push','created_at':'2026-01-01T00:00:00Z','status':status,'conclusion':conclusion}]
+    print(json.dumps([{'workflow_runs':rows}]))
+elif 'commits/' in args: print(os.environ.get('STUB_DATE','2026-01-01T00:00:00Z'))
+elif 'repos/netpilot-labs/containerlab-mcp' in args and '.default_branch' in args: print('main')
+else: raise SystemExit(2)
+PYGH
+cat > "$T/bin/date" <<'SHDATE'
+#!/bin/sh
+if [ "$*" = '+%s' ]; then
+  python3 - <<'PYDATE'
+import os
+from pathlib import Path
+p=Path(os.environ['SELFTEST_CLOCK'])
+n=int(p.read_text()) if p.exists() else 0
+p.write_text(str(n+1600))
+print(n)
+PYDATE
+else exec /bin/date "$@"; fi
+SHDATE
+printf '#!/bin/sh\nexit 0\n' > "$T/bin/sleep"
+chmod +x "$T/bin/gh" "$T/bin/date" "$T/bin/sleep"
+export SELFTEST_CLOCK="$T/clock" PATH="$T/bin:$PATH"
 R=o/r; D="$MERGE_CLAIM_DIR/o__r"; SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 fail=0; n=0
 t() { n=$((n+1)); local name=$1; shift; if "$@" >/dev/null 2>&1; then echo "ok   $n $name"; else echo "FAIL $n $name"; fail=1; fi; }
@@ -38,7 +75,7 @@ tok=$(MERGE_SLOT_ACK=7 "$S" acquire "$R" 8 2>/dev/null); "$S" release "$R" "$tok
 C="$MERGE_CLAIM_DIR/netpilot-labs__containerlab-mcp"
 "$S" settle netpilot-labs/containerlab-mcp "$SHA" BROKEN >/dev/null; t "(setup) a stale hold on a no-deploy repo" state "7 BROKEN" "$C"
 STUB_WF=2 STUB_RUNS="Tests in_progress/-" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "postmerge.sh <no-deploy repo>: a RUNNING main run keeps the hold" state "7 BROKEN" "$C"
-STUB_WF=2 STUB_RUNS="Tests completed/failure, Lint completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a FAILED main run keeps it" state "7 BROKEN" "$C"
+STUB_WF=2 STUB_RUNS="Tests completed/failure, Lint completed/success" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a FAILED main run keeps a RED hold" state "7 RED" "$C"
 STUB_WF=2 STUB_RUNS="" "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… no run yet keeps it" state "7 BROKEN" "$C"
 STUB_WF=2 STUB_RUNS="Tests completed/success" STUB_DATE=$(date -u +%FT%TZ) "$PM" containerlab-mcp "$SHA" >/dev/null 2>&1; t "… a green run on a merge seconds old keeps it (a second workflow's run may not exist yet)" state "7 BROKEN" "$C"
 out=$(STUB_WF=2 STUB_RUNS="Tests completed/success, Docs completed/skipped" "$PM" containerlab-mcp "$SHA" 2>&1); rc=$?

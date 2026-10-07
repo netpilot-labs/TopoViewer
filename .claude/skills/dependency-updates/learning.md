@@ -40,8 +40,10 @@ Learning pass:
         reproduces, drop stale trust rows, keep the incident log at 10, re-read SKILL.md
         against skill-maintenance's format rules, run every script once against the live
         inventory (a script nobody ran in 10 passes is either dead or untested).
-- [ ] i. SHIP — canonical repo: commit (message names the pass and the lesson) + push;
-        `sync-all.sh`; consumer commits; `git status` clean everywhere.
+- [ ] i. SHIP — canonical-source worktree: commit (message names the pass and lesson),
+        then complete `dev-workflow` through the reviewed source merge. Run `sync-all.sh`
+        after that merge; ship generated consumer updates through their reviewed PRs.
+        Owned worktrees finish clean; report any held source or consumer PR explicitly.
 ```
 
 A pass that changed no durable file is the exception, and the report says so
@@ -147,5 +149,5 @@ Learning pass: tiers §1/§2 rewritten (T4 heavy-gate + risk split + surfaces' o
   gotchas: `| tail` hides a spawn failure, macOS has no `timeout`, sentry 10.72 + exact-pin reason,
   lockdiff needs a committed ref; dev-workflow Guardrails dependency-bump carve-out; ledger rows ×8.
 Gap to raise once: PostHog capture signal needs an API key in netpilot-devops/.env.
-Canonical skills repo: pushed <sha>, consumers synced.
+Canonical source: PR <n> merged at <sha>; affected consumers: <PR/status>, or no generated change.
 ```

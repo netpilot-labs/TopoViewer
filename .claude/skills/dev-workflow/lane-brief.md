@@ -2,7 +2,8 @@
 
 Copy it whole, fill every `<…>`, delete nothing: a lane knows only what its brief says (`lanes.md` has the why behind each
 section; the deletion rule below is quoted verbatim because a subagent does not inherit caution it was not given).
-Lin, 2026-10-04 — distilled from the brief board 31's 14 lanes ran on (2026-10-01/02).
+Lin, 2026-10-04 — distilled from the brief board 31's 14 lanes ran on (2026-10-01/02); the held-slot line from the 2026-10-07
+snapshot wave (FE PR#605 read merge.md and took `MERGE_SLOT_ACK=604`; lanes without the line stalled asking).
 
 ```
 # Lane <id> — <issue or task title> (read fully before starting)
@@ -42,7 +43,9 @@ final message. Stay inside <issue>; anything that belongs elsewhere: one comment
   netpilot-ai --tunnel-through-iap --command '…'`; your lab prefix `<prefix>-`, your mgmt network `<name>` / `<subnet>`;
   destroy ONLY labs you deployed; never stop, reconfigure or re-package the VM; destroy your labs when done.
 - Merges queue per repo: merge.sh answers NOT MERGED while a sibling's merge + deploy watch is in flight — wait, re-run from
-  --dry-run (its base check may then ask for a rebase + re-verify). Sibling PRs in the same repo are expected.
+  --dry-run (its base check may then ask for a rebase + re-verify). Sibling PRs in the same repo are expected. A slot held by
+  a watch that ENDED (RED / BROKEN / REVIEW) opens only as merge.md's base-check section says — `MERGE_SLOT_ACK=<that pr>`
+  once its result is read and every line attributed; never delete a slot by hand.
 - Probes (`probe-testing`): cheapest tier that settles the question, default n=1, the budget line on the issue BEFORE the
   first run, hard cap $<n> per lane; judges run in YOUR foreground; long probes launch from the MAIN checkout with
   NETPILOT_BACKEND_DIR=<your worktree>.

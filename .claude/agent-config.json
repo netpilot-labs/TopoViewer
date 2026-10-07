@@ -75,7 +75,7 @@
     ".claude/skills/dependency-updates/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "57028c6a962a53d9ba44ed3fb739b16f4a22690fe6cfa375774c7e542055c056",
+      "sha256": "61b514f338fe087a3a14505ec537e92a1882f7752df772c7c2ef80dd18e35eef",
       "source": "dependency-updates/SKILL.md"
     },
     ".claude/skills/dependency-updates/gotchas.md": {
@@ -87,13 +87,13 @@
     ".claude/skills/dependency-updates/learning.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "4287ae38687b8c9948d0ecdf5e0f13b42197b49ab127a481d5c364f6f60cfe8f",
+      "sha256": "e8d20aa5e1a4d09332f78ea0e166d885c8468e9eda4932ab5743db5923c805fe",
       "source": "dependency-updates/learning.md"
     },
     ".claude/skills/dependency-updates/mechanics.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "f034c55e53775e637ac2bf3ac307e3da1370d6866e3a01f0b2f988db48b79f35",
+      "sha256": "48d442dd51e31be783cecc5f1ed4586254dfd48ad2aeebd07f89746c61a2bc57",
       "source": "dependency-updates/mechanics.md"
     },
     ".claude/skills/dependency-updates/scripts/alert.sh": {
@@ -111,19 +111,19 @@
     ".claude/skills/dependency-updates/scripts/inventory.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "9368b3ffbc4e5574eebad8fbcad13fe2ddb8ff317c0391184625acb87fdc42d3",
+      "sha256": "eb985324f1a2d9479f723b8ca4f9cfe83f2913251ff962bca86e929f603f2045",
       "source": "dependency-updates/scripts/inventory.sh"
     },
     ".claude/skills/dependency-updates/scripts/lockdiff.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "fe2e2d9ccd06929db642575febe471688e463d2e7dcebb3fe37dc5944e0e4586",
+      "sha256": "d8a7d9640cc880e463f811a0a02266e97a103f8e48f5ff5b929e52b29e0d0700",
       "source": "dependency-updates/scripts/lockdiff.sh"
     },
     ".claude/skills/dependency-updates/scripts/merge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "005002ff55c4a169afdfc3de167bb1a962faaedb5b78298fe4452438f20b762f",
+      "sha256": "f7cf17a9fea1cb5055611636cb2c310274c0e755288a91b798150afcdba9a5e1",
       "source": "dependency-updates/scripts/merge.sh"
     },
     ".claude/skills/dependency-updates/scripts/posthog-signal.sh": {
@@ -135,7 +135,7 @@
     ".claude/skills/dependency-updates/scripts/release-age.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "4f16f1de1052c44cd8d4b976a238217d88443c26b855284eb32560022b0b974c",
+      "sha256": "cdff873d234d8c541beec18e6612cc3f370eed51bad6131a74da5a7f5b3b1936",
       "source": "dependency-updates/scripts/release-age.sh"
     },
     ".claude/skills/dependency-updates/scripts/resolved.sh": {
@@ -147,13 +147,13 @@
     ".claude/skills/dependency-updates/scripts/revert-pr.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "daf7227182d036d8df6790911ef1d244559947b79cad3c8a8b4e5a56e1049a65",
+      "sha256": "680b9a4d133e48790559e98fb5b9cc6d3efed3131b1372e8f44586db181d23b7",
       "source": "dependency-updates/scripts/revert-pr.sh"
     },
     ".claude/skills/dependency-updates/scripts/trigger.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "b4c67f0171e717c3fdfe0c652f70b93404db825e7df346c0d7d542d231cf0474",
+      "sha256": "81b36ccca2c83e2f24ef08500a66e5dfa4d2d63023ddc51e2ffc76ebb6dd137c",
       "source": "dependency-updates/scripts/trigger.sh"
     },
     ".claude/skills/dependency-updates/self-evolve.md": {
@@ -183,25 +183,25 @@
     ".claude/skills/dev-workflow/deploy.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "5ff74f767c8bdb19fdfe091f8a5469a2b610933fdecb058024025a33e1df7a2e",
+      "sha256": "a9b965cd41db8a320e195e9f5e8e6ef1d4e659981a59174806ffe9344e8b68aa",
       "source": "dev-workflow/deploy.md"
     },
     ".claude/skills/dev-workflow/lane-brief.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "678063bb7d7b014e7cee146c30f88e05306be99f7ff796fe13b09cc6446fe5aa",
+      "sha256": "bc6e6c4b1f1a2e6debe94b23e2901039639fd98733442861e0d446f32fecc50c",
       "source": "dev-workflow/lane-brief.md"
     },
     ".claude/skills/dev-workflow/lanes.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "02ecfcca04bf487b74e88e5994d969d891a2e81665b6f7503f8e1940c7076ab7",
+      "sha256": "11e672243ac36a52efbe0378a42604d979f10d77fd75fcf3e5571e6592dea988",
       "source": "dev-workflow/lanes.md"
     },
     ".claude/skills/dev-workflow/merge.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "563eb6531d5325dc448074673662e3b5531162f19ce656914e45e883320a6d7b",
+      "sha256": "3eec8cc25df2f91eb5c833ac8b69c5e14413c7d2aa480bf989b540e23d9033ea",
       "source": "dev-workflow/merge.md"
     },
     ".claude/skills/dev-workflow/residuals.md": {
@@ -213,7 +213,7 @@
     ".claude/skills/dev-workflow/review.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "11012e797efbfd45cca4b807ec7b75ee4ff7fea87dab1fec43a056d931e8e158",
+      "sha256": "76092f2f60529f0d04faaad1d9d8065256fdbeee1788af50e9f46715949210a2",
       "source": "dev-workflow/review.md"
     },
     ".claude/skills/dev-workflow/screenshots.md": {
@@ -237,7 +237,7 @@
     ".claude/skills/dev-workflow/scripts/ci-wait.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "35a4d470b2023dc0dc7dcbb5b903d51c77490dfad702eab571fe5ea9213ad2a6",
+      "sha256": "09454a3ffe9f1060602cf4660b9f5b9876f5c1a4161df7cb1e045201ace8486a",
       "source": "dev-workflow/scripts/ci-wait.sh"
     },
     ".claude/skills/dev-workflow/scripts/lane-audit.sh": {
@@ -258,10 +258,16 @@
       "sha256": "970c10cab3ca3de0f3fa01b7867604da239c5b2856cb8d286e626bc53199adb1",
       "source": "dev-workflow/scripts/loose-ends.sh"
     },
+    ".claude/skills/dev-workflow/scripts/merge-checkout-proof.py": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "39a4190e3b1d1415a0a01ca5e2f3dd4e9345be49ebdd8da40478bb704a9363a0",
+      "source": "dev-workflow/scripts/merge-checkout-proof.py"
+    },
     ".claude/skills/dev-workflow/scripts/merge-slot-selftest.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "0b6356116cc0b21042e118e781253c375260e908c1c488c09f5651acf2dc9b9b",
+      "sha256": "1eeb8a73cc9f3b5c33b1e6741c87765a82c0bc4fc07699fb4dc67afd327345ef",
       "source": "dev-workflow/scripts/merge-slot-selftest.sh"
     },
     ".claude/skills/dev-workflow/scripts/merge-slot.sh": {
@@ -273,13 +279,13 @@
     ".claude/skills/dev-workflow/scripts/merge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "8bdee98ed53c207bccdd4ffab1b73b8b52030615eade38dc7463c1b5a438c3ed",
+      "sha256": "f996e54367a4686b7c69467329a61038d3d8224cf35233f323ea18395745084b",
       "source": "dev-workflow/scripts/merge.sh"
     },
     ".claude/skills/dev-workflow/scripts/postmerge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "2185e4a433ba73ce2abdc90c8788e46982c30ac77289fbe31f6c0e9d0fe92e74",
+      "sha256": "7bacf4c863731746832cb272abe8f0aedbc949c00cc58608ff8e6686ff8e5767",
       "source": "dev-workflow/scripts/postmerge.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-gates.sh": {
@@ -309,8 +315,14 @@
     ".claude/skills/dev-workflow/scripts/required-workflows.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "7b572027024760facfb06c4196a8a911b88d8c3b642bc922c8e46a2cc8ace9ae",
+      "sha256": "16d1cc7d1aab3572cc6f66ed11d65e7ee01d3a254dabe99d9a4c36d77b29c72e",
       "source": "dev-workflow/scripts/required-workflows.sh"
+    },
+    ".claude/skills/dev-workflow/scripts/unseen-pr-workflows.py": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "938d07ad13aa3ef701b7961d98f1013a32f27453d52ce4b50bbe403fcf656a3d",
+      "source": "dev-workflow/scripts/unseen-pr-workflows.py"
     },
     ".claude/skills/dev-workflow/scripts/with-db-lock.sh": {
       "kind": "file",
@@ -333,7 +345,7 @@
     ".claude/skills/dev-workflow/shell.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "075529808a45e3a9bb75e96b758663261c156152e20918c7714ea8c967868838",
+      "sha256": "436a97a60c1e951adb54c1cb4908389413c28808f68cc10a7e8a057c1868b434",
       "source": "dev-workflow/shell.md"
     },
     ".claude/skills/dev-workflow/test.md": {
@@ -447,7 +459,7 @@
     ".claude/skills/skill-maintenance/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "41bc699b9299bb4f929ffbbc94489ea60a530c0fc75e20122657e177170967fb",
+      "sha256": "34cc9d3fe158ee3d4fb49a7c939217865d6276d5eb2f36c3766c6a2e4cd74f4a",
       "source": "skill-maintenance/SKILL.md"
     },
     "AGENTS.md": {
