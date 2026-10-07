@@ -22,8 +22,6 @@ Draft pushes skip every CI job on the four main repos, so the loop runs CI-free.
    back with `gh pr ready --undo`. After ANY push, wait for
    that head's run to appear before `gh pr ready` — a flip seconds after a push gets its run cancelled by the concurrency group
    (BE PR#764).
-The canonical `scripts/ci-jobs.py` checks required job names for known PR workflows; unknown workflows require every job to succeed. Keep its table aligned when those CI job names change. Backend real-Clerk auth is main-only and checked by `postmerge.sh`, not its PR gate.
-
 CI green is defined once, in SKILL.md (the two gates). Read it at job level (`gh api "repos/o/r/actions/runs?head_sha=<full
 oid>"`): `gh pr checks` lags a push and lies on a DIRTY PR.
 **A repo with NO CI workflows** (`gh api repos/<o>/<r>/actions/workflows --jq .total_count` = 0; netpilot-skills today): the CI
@@ -41,7 +39,7 @@ tag-gated — merging is not shipping (clab#45).
    mimics every step below on every head. Hold the merge, poll ~30 min, then `gh pr ready --undo && sleep 30 && gh pr ready`
    mints a fresh run on the same head (FE PR#334, BE#428).
 1. `gh pr view --json mergeable,mergeStateStatus`: `CONFLICTING`/`DIRTY` gets NO runs until the conflict is resolved (a
-   `merge origin/<default>` commit is fine) — a sibling merge flips a long-open PR silently (FE PR#199, clab PR#140, BE PR#723).
+   `merge origin/main` commit is fine) — a sibling merge flips a long-open PR silently (FE PR#199, clab PR#140, BE PR#723).
 2. `gh pr close <n> && gh pr reopen <n>` re-fires on the SAME head (the Codex verdict survives); also the fix when a flip
    minted only the draft-era skipped run (BE PR#688).
 3. Still zero after ~3 min → new head (empty commit / rebase) — invalidates the verdict, re-request.
@@ -57,8 +55,7 @@ first (clab#40).
 The script reads the base, the carve-out and the merge ref from the API (its header carries each why); chaining check and
 merge by hand in one line merged stale bases three times (FE PR#247, #276, BE PR#528). What its `FINAL` lines ask of you:
 - **"rebase and re-verify"** — main moved and the carve-out (Lin, 2026-08-07: every required run green AND created after
-  main's tip, with successful jobs' immutable checkout commit parents proving the current default tip and exact PR head)
-  does not hold: rebase, then CI + Codex again, even with no file overlap (CI builds the merge commit; `CLEAN
+  main's tip) does not hold: rebase, then CI + Codex again, even with no file overlap (CI builds the merge commit; `CLEAN
   MERGEABLE` never meant up to date). Lockfile PR: rebuild on current main, `pnpm install --frozen-lockfile` on that tree.
 - **"stale merge ref"** — GitHub has not recomputed `refs/pull/<n>/merge` since a sibling merge: close/reopen, then re-verify
   (FE#489, BE PR#803). `mergeable=UNKNOWN` is that recompute still running — re-run in a moment (BE PR#935).
@@ -69,10 +66,6 @@ merge by hand in one line merged stale bases three times (FE PR#247, #276, BE PR
   agents merging in one repo from two machines, sequence those merges yourself (each waits for the other's watch).
 - **Any PR carrying a migration:** `uv run alembic heads` on the rebased branch prints ONE head, and Neon's `alembic current`
   equals the new `down_revision`; else re-point it (BE PR#716 + #719 forked the chain).
-
-The carve-out reads the selected run attempt's successful job logs and standard `actions/checkout` merge SHA,
-then verifies its two Git parents. Missing/expired logs, custom checkout names or multiple checkouts require rebase;
-review the proof reader before adopting a changed checkout log format. A timestamp alone never proves the tested base.
 
 ## Merging — `merge.sh o/n <pr>`
 - **The script is the only merge command:** it merges from outside any checkout with the full head oid and asserts `MERGED`
@@ -87,11 +80,11 @@ review the proof reader before adopting a changed checkout log format. A timesta
   valid closing keyword** (`Fixes BE#944` links/closes nothing): the issue stays OPEN after merge. Verify
   each linked issue actually closed and close by hand if the auto-close missed (BE#944/#945, 2026-10-01).
 
-## Migrations at merge — the agent's own in default mode since 2026-10-04 (authority.md Delegation modes)
+## Migrations at merge — the agent's own in default mode since 2026-10-04 (SKILL.md Delegation modes)
 Additive/data migrations: apply to Neon BEFORE merge (new code needs the schema). DROP migrations on tables the deployed code
 still touches: merge → deploy → verify → run the docstring's pre-apply check → apply (BE PR#570).
 
 ## Stacked PRs
-Retarget the child to the repository’s default branch BEFORE squash-merging its base (`gh pr edit <child> --base <default-branch>`), then rebase the child
-`--onto origin/<default-branch> <old-base-tip>` — merging the base with `--delete-branch` auto-closes the child unrecoverably
+Retarget the child to the repository’s default branch BEFORE squash-merging its base (`gh pr edit <child> --base main`), then rebase the child
+`--onto origin/main <old-base-tip>` — merging the base with `--delete-branch` auto-closes the child unrecoverably
 (clab PR#193→#195).

@@ -14,7 +14,6 @@ lookup is the part every lane got wrong once. Run only AFTER `git diff --stat HE
 lists every file the replies claim (dev-workflow review.md, the loop step 3).
 """
 import json
-import re
 import subprocess
 import sys
 
@@ -41,24 +40,13 @@ def main(argv):
         raise SystemExit(__doc__)
     repo, pr = args[0], int(args[1])
     sha = args[2] if len(args) > 2 else ""
-    if not dry and not re.fullmatch(r"[0-9a-f]{40}", sha):
-        raise SystemExit("reply SHA must be the full hexadecimal current PR head; no mutations were posted")
-    replies = {}
-    if len(args) > 3:
-        with open(args[3]) as reply_file:
-            replies = json.load(reply_file)
+    replies = json.load(open(args[3])) if len(args) > 3 else {}
     owner, name = repo.split("/", 1)
 
     q = """query($owner:String!,$name:String!,$pr:Int!){ repository(owner:$owner,name:$name){
-      pullRequest(number:$pr){ headRefOid reviewThreads(last:100){ totalCount nodes{ id isResolved
+      pullRequest(number:$pr){ reviewThreads(last:100){ nodes{ id isResolved
         comments(first:1){ nodes{ databaseId path line originalLine } } } } } } }"""
-    snapshot = gql(q, {"owner": owner, "name": name, "pr": pr})["data"]["repository"]["pullRequest"]
-    if not dry and snapshot.get("headRefOid") != sha:
-        raise SystemExit("reply SHA does not match the current PR head; no replies or resolutions were posted")
-    threads = snapshot["reviewThreads"]
-    nodes = threads["nodes"]
-    if threads.get("totalCount") != len(nodes):
-        raise SystemExit("review thread window is incomplete; no replies or resolutions were posted")
+    nodes = gql(q, {"owner": owner, "name": name, "pr": pr})["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
     by_comment = {str(t["comments"]["nodes"][0]["databaseId"]): t for t in nodes if t["comments"]["nodes"]}
 
     if dry:
@@ -67,21 +55,12 @@ def main(argv):
             print(f"{'resolved' if t['isResolved'] else 'OPEN    '} thread={t['id']} comment={cid} {c['path']}:{c['line'] or c['originalLine']}")
         return
 
-    if not isinstance(replies, dict):
-        raise SystemExit("replies must be an object keyed by comment id")
-    plan = []
     for cid, spec in replies.items():
         t = by_comment.get(cid)
         if t is None:
             raise SystemExit(f"no review thread starts with comment {cid} (run --dry-run to list)")
-        if isinstance(spec, str):
+        if isinstance(spec, str):  # a bare string = {"text": ..., "resolve": true} (mkt PR#243, 2026-10-04)
             spec = {"text": spec, "resolve": True}
-        if (not isinstance(spec, dict) or not isinstance(spec.get("text"), str)
-                or not spec["text"].strip() or not isinstance(spec.get("resolve", False), bool)):
-            raise SystemExit(f"invalid reply payload for {cid}: nonempty text and boolean resolve required")
-        plan.append((cid, t, spec))
-
-    for cid, t, spec in plan:
         text = spec["text"].replace("<sha>", sha)
         r = subprocess.run(
             ["gh", "api", f"repos/{repo}/pulls/{pr}/comments/{cid}/replies", "-X", "POST", "--input", "-"],

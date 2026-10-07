@@ -54,17 +54,18 @@ rollout order, and what it deliberately does NOT build.
 
 ## 3. Synthesize — you write DESIGN.md and ISSUES.md yourself
 
+Read [the existing golden-image impact gates](../golden-image/impact.md) before a VM-side design.
+
 - **DESIGN.md** (concise — design docs <~200 lines; code is truth): one-paragraph summary,
   one-line-per-rejected-alternative section, the chosen architecture per component, mode &
   fleet matrix, policy table, rollout order (V33 playbook for VM-side capabilities: repo PR +
-  feature flag → dormant backend/frontend → cloud release + image promotion), risks as
-  future board watch-items. When planning VM or rollout changes, read the `golden-image`
-  [impact.md](../golden-image/impact.md), which owns the impact gates; this planning
-  reference grants no operational authority.
-- **ISSUES.md** per the project-management + issue-labeling contracts: one living design issue
-  (`agent/stop`, body = DESIGN.md), the sole navigation hub; phase issues and their PR-sized
-  implementation sub-issues in waves with **evidence-backed parallel-lane analysis**
-  (two issues touching one file are sequenced, not parallel) and per-issue labels, blockers, file pointers, acceptance criteria.
+  feature flag → dormant backend/frontend → cloud release + image promotion — `golden-image`
+  Impact model owns the gates: an image-level change is Lin-gated, a fleet sweep runs only on
+  his direction), risks as future board watch-items.
+- **ISSUES.md** per the project-management + issue-labeling contracts: umbrella (`agent/stop`)
+  + design issue (`agent/stop`, body = DESIGN.md, living) + PR-sized implementation issues in
+  waves with **evidence-backed parallel-lane analysis** (two issues touching one file are
+  sequenced, not parallel) and per-issue labels, blockers, file pointers, acceptance criteria.
 - Verify every number yourself before asserting it (line counts for the boy-scout check,
   caps, tool counts) — explorer claims drift.
 - **Un-repo'd components are findings**: if something load-bearing has no source in any repo

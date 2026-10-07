@@ -75,7 +75,7 @@
     ".claude/skills/dependency-updates/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "f32b79e7e3b17d9839a1a3023f74eeaa0270f59418f4634d82363d369692f193",
+      "sha256": "57028c6a962a53d9ba44ed3fb739b16f4a22690fe6cfa375774c7e542055c056",
       "source": "dependency-updates/SKILL.md"
     },
     ".claude/skills/dependency-updates/gotchas.md": {
@@ -93,14 +93,8 @@
     ".claude/skills/dependency-updates/mechanics.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "b74d3731c7939a69052499dec09ab65e7b073209f6af36fd7252c30fc43222ce",
+      "sha256": "f034c55e53775e637ac2bf3ac307e3da1370d6866e3a01f0b2f988db48b79f35",
       "source": "dependency-updates/mechanics.md"
-    },
-    ".claude/skills/dependency-updates/pass.md": {
-      "kind": "file",
-      "mode": 420,
-      "sha256": "90a167b084c690296d30381095dd0071e5752baa7b202386ba04e430147ec68b",
-      "source": "dependency-updates/pass.md"
     },
     ".claude/skills/dependency-updates/scripts/alert.sh": {
       "kind": "file",
@@ -111,37 +105,37 @@
     ".claude/skills/dependency-updates/scripts/dashboard.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "425ecc98f9822ebc94bb966ea31c61fbbb6fe59a539d23b7d541ead57c38782d",
+      "sha256": "e53d70ad59d68e20d70269803583bdd336cf3101fc627d79e3732f6f1c543d94",
       "source": "dependency-updates/scripts/dashboard.sh"
     },
     ".claude/skills/dependency-updates/scripts/inventory.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "a6b2fbb1b6e238abdb8d7fcdd3fa02277b8df4bb6d10dba5a002b83c9c75a8de",
+      "sha256": "9368b3ffbc4e5574eebad8fbcad13fe2ddb8ff317c0391184625acb87fdc42d3",
       "source": "dependency-updates/scripts/inventory.sh"
     },
     ".claude/skills/dependency-updates/scripts/lockdiff.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "a8ec748b4614a2194daab9549672acf60a50802b70bc96690c4adf5bea32c872",
+      "sha256": "fe2e2d9ccd06929db642575febe471688e463d2e7dcebb3fe37dc5944e0e4586",
       "source": "dependency-updates/scripts/lockdiff.sh"
     },
     ".claude/skills/dependency-updates/scripts/merge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "f7cf17a9fea1cb5055611636cb2c310274c0e755288a91b798150afcdba9a5e1",
+      "sha256": "005002ff55c4a169afdfc3de167bb1a962faaedb5b78298fe4452438f20b762f",
       "source": "dependency-updates/scripts/merge.sh"
     },
     ".claude/skills/dependency-updates/scripts/posthog-signal.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "86836df1649fd1698ebac9feb2b6df2326e4d5c3c6b1f6407161ae6c64bf561e",
+      "sha256": "9d8624163267ee066c786dea6ee0de61e3ae486c5a337c33f82b79a5bfecfa8e",
       "source": "dependency-updates/scripts/posthog-signal.sh"
     },
     ".claude/skills/dependency-updates/scripts/release-age.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "dfed49587998549fb446efea3777b9407b4c73f49fd95ee637e9699968d9afe0",
+      "sha256": "4f16f1de1052c44cd8d4b976a238217d88443c26b855284eb32560022b0b974c",
       "source": "dependency-updates/scripts/release-age.sh"
     },
     ".claude/skills/dependency-updates/scripts/resolved.sh": {
@@ -153,14 +147,20 @@
     ".claude/skills/dependency-updates/scripts/revert-pr.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "3dc332d03e77c93c289394ba734629ae8654c087b2e25b93eeddd4c0f6f85f27",
+      "sha256": "daf7227182d036d8df6790911ef1d244559947b79cad3c8a8b4e5a56e1049a65",
       "source": "dependency-updates/scripts/revert-pr.sh"
     },
     ".claude/skills/dependency-updates/scripts/trigger.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "633774e428c08175323e8e29c4c3a63a71e38cefe925b54b01438065244fc9f1",
+      "sha256": "b4c67f0171e717c3fdfe0c652f70b93404db825e7df346c0d7d542d231cf0474",
       "source": "dependency-updates/scripts/trigger.sh"
+    },
+    ".claude/skills/dependency-updates/self-evolve.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "6bb0d2b57a4d9370b80b801305bdbe025611810719fbe9b586274d976c65c28c",
+      "source": "dependency-updates/self-evolve.md"
     },
     ".claude/skills/dependency-updates/tiers.md": {
       "kind": "file",
@@ -171,14 +171,8 @@
     ".claude/skills/dev-workflow/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "41753330e1d07359a08417429fa0c46696985f6e93273f32936d983b10ff592a",
+      "sha256": "196e0157240083cba20492c4c3fbf5cf3044285ffbd116660e2c8e7ca2bc5a83",
       "source": "dev-workflow/SKILL.md"
-    },
-    ".claude/skills/dev-workflow/authority.md": {
-      "kind": "file",
-      "mode": 420,
-      "sha256": "c3f8476c0cc63bffbff49bedc65b9be9535e0954149cb3af2878d8e23aab824d",
-      "source": "dev-workflow/authority.md"
     },
     ".claude/skills/dev-workflow/build.md": {
       "kind": "file",
@@ -189,13 +183,13 @@
     ".claude/skills/dev-workflow/deploy.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "7e40843c45bd78bffbbb9f716f1cd40f398e993c20bb4b7f3efeabbba0c66314",
+      "sha256": "de0744dddba92cba89e3b4d150bdd71906b0bcf6f0dab71c80ca828158a54bab",
       "source": "dev-workflow/deploy.md"
     },
     ".claude/skills/dev-workflow/lane-brief.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "1d35ae4d1cd634950a63c5612bc70695183deb10249b42f0f2415b43e595df9d",
+      "sha256": "678063bb7d7b014e7cee146c30f88e05306be99f7ff796fe13b09cc6446fe5aa",
       "source": "dev-workflow/lane-brief.md"
     },
     ".claude/skills/dev-workflow/lanes.md": {
@@ -207,49 +201,37 @@
     ".claude/skills/dev-workflow/merge.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "d68ca4addf2dfbdc7048bb890f93862d79c3afe89d92f066ad598e86ff935241",
+      "sha256": "4311e33d26df15be5c60755f3d45c9ae623e256538d0bacc79ea00cc772ef719",
       "source": "dev-workflow/merge.md"
     },
     ".claude/skills/dev-workflow/residuals.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "3084ad3303165c620d7cef7999f3f10ceb3bb54e0fde507630ab33ee14205fdd",
+      "sha256": "c904a76f9a6c44e68e768f0d3f61b5ba71d5ae1c530728439e5af721089c06f6",
       "source": "dev-workflow/residuals.md"
     },
     ".claude/skills/dev-workflow/review.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "2e8f6d4c94273f19247164500e745fd8aaad36146ca9afb16a40f039394688d1",
+      "sha256": "11012e797efbfd45cca4b807ec7b75ee4ff7fea87dab1fec43a056d931e8e158",
       "source": "dev-workflow/review.md"
     },
     ".claude/skills/dev-workflow/screenshots.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "71775c67c067650a822984dc6b6e3e1438b704795bc5fb140cabc1e76179b291",
+      "sha256": "08fe966c7a8b94760d4c6efc5f00dc98c36f76272a70bac8e2cc2084f4986019",
       "source": "dev-workflow/screenshots.md"
-    },
-    ".claude/skills/dev-workflow/scripts/browser-capture-probe.py": {
-      "kind": "file",
-      "mode": 493,
-      "sha256": "ac9713b3340aad9d5436ce19db36d6c61cc5136da179885f3a476bae4bf6fd0b",
-      "source": "dev-workflow/scripts/browser-capture-probe.py"
-    },
-    ".claude/skills/dev-workflow/scripts/ci-jobs.py": {
-      "kind": "file",
-      "mode": 493,
-      "sha256": "8686b99b07aa375ad910d47345157471386f1bf9dbf91f7839ea5a4061f98726",
-      "source": "dev-workflow/scripts/ci-jobs.py"
     },
     ".claude/skills/dev-workflow/scripts/ci-wait.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "986f74218fa3deedb947bea8a20823beaa66c34ae111350ea314c2c4ac49e700",
+      "sha256": "35a4d470b2023dc0dc7dcbb5b903d51c77490dfad702eab571fe5ea9213ad2a6",
       "source": "dev-workflow/scripts/ci-wait.sh"
     },
     ".claude/skills/dev-workflow/scripts/lane-audit.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "3d642b0e70152c62427814eab27bf1114d4ee0bb68dcefc53c3ebe1f5d3971ea",
+      "sha256": "b6c18509bdc7c9afcef370cc6f3205fc80040b636964131209b7d714c9aa8d32",
       "source": "dev-workflow/scripts/lane-audit.sh"
     },
     ".claude/skills/dev-workflow/scripts/lessons-lint.sh": {
@@ -261,49 +243,43 @@
     ".claude/skills/dev-workflow/scripts/loose-ends.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "8f9900956ea3e3990d08bae014f5a393e9df063681eb359d0a85ef31754c9c7b",
+      "sha256": "cb8c2cd5df23b08aceac4a6f882124f7d18713307397c41ab59a4d813cdfc196",
       "source": "dev-workflow/scripts/loose-ends.sh"
-    },
-    ".claude/skills/dev-workflow/scripts/merge-checkout-proof.py": {
-      "kind": "file",
-      "mode": 493,
-      "sha256": "e4d148f8cc25489d4a692452221bbde46913aae58aaf077c33d6b447cf566bf3",
-      "source": "dev-workflow/scripts/merge-checkout-proof.py"
     },
     ".claude/skills/dev-workflow/scripts/merge-slot-selftest.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "ba65bc64543fad150dd4dad105dff273054c5fc483a421d0b84d7abd817e967e",
+      "sha256": "0b6356116cc0b21042e118e781253c375260e908c1c488c09f5651acf2dc9b9b",
       "source": "dev-workflow/scripts/merge-slot-selftest.sh"
     },
     ".claude/skills/dev-workflow/scripts/merge-slot.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "c2373a43b5b12371a9cdf242be5d0f120cda96867cd9ac303e4f73b516ca07e9",
+      "sha256": "4407263dfd6db9e9fb1504adce092778584b324d5a42aff6cc658bc6af6fcb5c",
       "source": "dev-workflow/scripts/merge-slot.sh"
     },
     ".claude/skills/dev-workflow/scripts/merge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "8fcbbdc02f7d76145f47dd76b78347a8a48b789c4620e18f9d2228ef8741e3da",
+      "sha256": "8bdee98ed53c207bccdd4ffab1b73b8b52030615eade38dc7463c1b5a438c3ed",
       "source": "dev-workflow/scripts/merge.sh"
     },
     ".claude/skills/dev-workflow/scripts/postmerge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "79d221c606d4aaaa13852aa31e1161963ff99e898b9ea14d2a0a66ab1958fa7a",
+      "sha256": "8376577390cdbf8d301ae6acfbfb25c65a5bf3007b192655b4bd5d504466c914",
       "source": "dev-workflow/scripts/postmerge.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-gates.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "47ee1bb868170dab88d18346a737817948261f776e188d00f0c2d87d6eb01ab2",
+      "sha256": "5bdbc9549a93df0d4db45c52632ab84220c8cb505a86e8a510010e9f81bf5ffd",
       "source": "dev-workflow/scripts/pr-gates.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-threads.py": {
       "kind": "file",
       "mode": 493,
-      "sha256": "8fa9a187aa02920dafcbe4a9980df1ec19db2746cbf25713fc00a6fc831ea902",
+      "sha256": "9068f7cc84c562b3ca23a42a912f329460f22960d9b639a1c6ff857679aa67fb",
       "source": "dev-workflow/scripts/pr-threads.py"
     },
     ".claude/skills/dev-workflow/scripts/preflight.sh": {
@@ -321,20 +297,20 @@
     ".claude/skills/dev-workflow/scripts/required-workflows.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "73dc8bdec6c945f015658d820b2c812b4b178ab24986df91c8c655cdd5e995d0",
+      "sha256": "7b572027024760facfb06c4196a8a911b88d8c3b642bc922c8e46a2cc8ace9ae",
       "source": "dev-workflow/scripts/required-workflows.sh"
-    },
-    ".claude/skills/dev-workflow/scripts/unseen-pr-workflows.py": {
-      "kind": "file",
-      "mode": 493,
-      "sha256": "ee4eb7c21b22316c66577dd16d5d7e673b2a6e56ecda492d99f6ad46f74ed6e2",
-      "source": "dev-workflow/scripts/unseen-pr-workflows.py"
     },
     ".claude/skills/dev-workflow/scripts/with-db-lock.sh": {
       "kind": "file",
       "mode": 493,
       "sha256": "a8a3cd7820b8a647cdcd6d4a0f9342223fbf3119fdd9bf084e8d7a3425715457",
       "source": "dev-workflow/scripts/with-db-lock.sh"
+    },
+    ".claude/skills/dev-workflow/self-evolve.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "6bb0d2b57a4d9370b80b801305bdbe025611810719fbe9b586274d976c65c28c",
+      "source": "dev-workflow/self-evolve.md"
     },
     ".claude/skills/dev-workflow/setup.md": {
       "kind": "file",
@@ -351,14 +327,20 @@
     ".claude/skills/dev-workflow/test.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "dc06925e89c25abba57c83b62d3561a7acf6a3519134cf943c1fbc2dabdbc88a",
+      "sha256": "310a41e9857ba16227c4516a1680a1e4d97ce65051fa9473057437a68fb4fa05",
       "source": "dev-workflow/test.md"
     },
     ".claude/skills/feature-research/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "1f57fa37996c631cf5672cb7a70d601a090a18649e157646b33e6c22835a9ca1",
+      "sha256": "f1e4b931f1444ff68e29c08050a263528a7e59c9a359daea97aa7b4fb8d592cf",
       "source": "feature-research/SKILL.md"
+    },
+    ".claude/skills/feature-research/self-evolve.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "6bb0d2b57a4d9370b80b801305bdbe025611810719fbe9b586274d976c65c28c",
+      "source": "feature-research/self-evolve.md"
     },
     ".claude/skills/golden-image/impact.md": {
       "kind": "file",
@@ -369,8 +351,14 @@
     ".claude/skills/issue-labeling/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "28ef6cb76f1e569868a3a1472de77e1d6424c272d613a65addaaf15f71126616",
+      "sha256": "362a66a7437ecc2adbf8daf5bebf305981c8da1d699bd9a883715980254ce853",
       "source": "issue-labeling/SKILL.md"
+    },
+    ".claude/skills/issue-labeling/self-evolve.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "6bb0d2b57a4d9370b80b801305bdbe025611810719fbe9b586274d976c65c28c",
+      "source": "issue-labeling/self-evolve.md"
     },
     ".claude/skills/probe-testing/SKILL.md": {
       "kind": "file",
@@ -384,29 +372,35 @@
       "sha256": "1b1475e4e90d043c28ce1fcccfb53588e2ce251a7b468ef7bc4aac45e8e1a38d",
       "source": "probe-testing/probe-recipes.md"
     },
+    ".claude/skills/probe-testing/self-evolve.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "6bb0d2b57a4d9370b80b801305bdbe025611810719fbe9b586274d976c65c28c",
+      "source": "probe-testing/self-evolve.md"
+    },
     ".claude/skills/project-management/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "f63e9c52a120f1561094c868bb2f13070088b1824ebcc4144f360cac9dc0bcee",
+      "sha256": "070021a7f06dd8cccc66440cd3352b6ef10cfe4407079b4a724247e0327754c3",
       "source": "project-management/SKILL.md"
     },
-    ".claude/skills/project-management/closing.md": {
+    ".claude/skills/project-management/self-evolve.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "6bd9265619a7bbf5c9f7f725a87359f6e692180514d9e08e7950e4dfd6e4b2dc",
-      "source": "project-management/closing.md"
+      "sha256": "6bb0d2b57a4d9370b80b801305bdbe025611810719fbe9b586274d976c65c28c",
+      "source": "project-management/self-evolve.md"
     },
     ".claude/skills/prompt-engineering/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "5428eaa2470ce6fd39fa31bd6574df02f1a6058e19627b7e350a9ce39767b3b2",
+      "sha256": "98be61f9e497e37b7a40593cae5870c83a97053effca489b8b7eda3b1d00e66e",
       "source": "prompt-engineering/SKILL.md"
     },
-    ".claude/skills/prompt-engineering/acceptance.md": {
+    ".claude/skills/prompt-engineering/self-evolve.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "fcfa173660fb781c4c8e6a2e584e652b02b4a61eca1d0d2bf07d9d8e95402087",
-      "source": "prompt-engineering/acceptance.md"
+      "sha256": "6bb0d2b57a4d9370b80b801305bdbe025611810719fbe9b586274d976c65c28c",
+      "source": "prompt-engineering/self-evolve.md"
     },
     ".claude/skills/sdk-upgrade-adoption/SKILL.md": {
       "kind": "file",
@@ -432,10 +426,16 @@
       "sha256": "77f0d36c0eff3a4afc0e2ea6ad117e1eb7ca31dd7304913439edec0d61453fce",
       "source": "sdk-upgrade-adoption/issue-shapes.md"
     },
+    ".claude/skills/sdk-upgrade-adoption/self-evolve.md": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "6bb0d2b57a4d9370b80b801305bdbe025611810719fbe9b586274d976c65c28c",
+      "source": "sdk-upgrade-adoption/self-evolve.md"
+    },
     ".claude/skills/skill-maintenance/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "c4e58a77da698fdd6735b22866f2b1b2d65dd791061376e2e206c7be8c806ab1",
+      "sha256": "41bc699b9299bb4f929ffbbc94489ea60a530c0fc75e20122657e177170967fb",
       "source": "skill-maintenance/SKILL.md"
     },
     "AGENTS.md": {

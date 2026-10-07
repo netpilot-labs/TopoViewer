@@ -5,7 +5,7 @@ Contents: red-proof · CI-parity · frontend harness · backend harness · local
 ## Red-proof (every regression test; Lin, FE PR#195)
 - **A regression test counts once you have SEEN it fail without the fix.** Cheapest: TESTS FIRST — write the assertions on the
   unchanged tree, run red, then implement (FE PR#544). Fix already written: `<skill-dir>/scripts/redproof.sh <file> --ref
-  origin/<default> -- <test cmd>` (`<default>` is the remote default branch; `--ref HEAD` for an uncommitted fix; `--sub <old> <new>` for one exact mutation) — it first runs
+  origin/main -- <test cmd>` (`--ref HEAD` for an uncommitted fix; `--sub <old> <new>` for one exact mutation) — it first runs
   the command GREEN on the unmutated file (a test that is already failing proves nothing: exit 3, no proof; BE#962), runs
   bounded and puts the file back byte-checked even when the red run hangs; exit 0 = red seen. A NEW harness errors at
   fixture setup against `main`, which proves little: one `--sub` mutation per mechanism instead (clab PR#266, BE PR#953).
@@ -18,8 +18,7 @@ Contents: red-proof · CI-parity · frontend harness · backend harness · local
   a stale one, BE#260) and is bounded: a red run that HANGS leaves the MUTATED file on disk (BE PR#904, 2026-09-29).
 - **Never mock the transform under test** — at least one test drives the REAL pipeline from raw inputs (#195). A fixture that
   encodes your BELIEF about an external system proves nothing: match what the program actually writes (tusd `.info`, clab#39;
-  `httpx.MockTransport` buffers, BE#258). Smoke CLI reads on the installed client: `gh api --slurp` rejects `--jq`;
-  pipe paginated JSON to external `jq`, and make the mock reject that flag combination (skills PR#78, 2026-10-06).
+  `httpx.MockTransport` buffers, BE#258).
 - A "defaults to X" test after a `beforeEach` that sets X is vacuous; module singletons need `vi.resetModules()` + dynamic
   import (FE PR#309). Cancellation tests need a real suspension point (BE#258). Prepared-statement/plan-cache behavior: loop the
   statement ≥10× on ONE pooled connection (BE#325).

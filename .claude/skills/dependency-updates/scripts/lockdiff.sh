@@ -32,13 +32,13 @@ if [ -n "$pr" ]; then
   gh pr view "$pr" ${repo:+--repo "$repo"} --json body --jq .body |
     sed -n -E 's/^\| \[([^]]+)\].*/\1/p' | sed 's/&#8203;//g' | sort -u > "$listed"
 fi
-name_of() { local key=${1%%(*}; echo "${key%@*}"; }   # strip the trailing @version (scoped names keep their leading @)
+name_of() { echo "${1%@*}"; }   # strip the trailing @version (scoped names keep their leading @)
 echo "moved on $branch vs $base: $(wc -l < "$tmp/added" | tr -d ' ') added/changed, $(wc -l < "$tmp/removed" | tr -d ' ') removed"
 while read -r k; do
   [ -z "$k" ] && continue
   n=$(name_of "$k")
   if [ -s "$listed" ] && grep -qxF "$n" "$listed"; then tag=LISTED; else tag=UNLISTED; fi
-  old=$(awk -v name="$n" 'index($0, name "@")==1 {print substr($0,length(name)+2)}' "$tmp/base" | tr '\n' ',' | sed 's/,$//')
+  old=$(grep -E "^$(printf '%s' "$n" | sed 's/[.[\*^$]/\\&/g')@" "$tmp/base" | sed 's/^.*@//' | tr '\n' ',' | sed 's/,$//')
   printf '  %-9s %s   (was %s)\n' "$tag" "$k" "${old:-absent}"
 done < "$tmp/added"
 [ -s "$tmp/removed" ] && { echo "removed:"; sed 's/^/  /' "$tmp/removed"; }

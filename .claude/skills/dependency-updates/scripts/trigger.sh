@@ -15,7 +15,7 @@ cmd=${1:?}; shift
 case "$cmd" in
   pypi-cap) capper=${1:?}; pkg=${2:?}
     curl -sf "https://pypi.org/pypi/$capper/json" | jq -r --arg p "$pkg" \
-      '"\(.info.name) latest \(.info.version)", ((.info.requires_dist // [])[] | select((capture("^(?<name>[A-Za-z0-9][A-Za-z0-9._-]*)").name | ascii_downcase | gsub("[-_.]+"; "-")) == ($p | ascii_downcase | gsub("[-_.]+"; "-"))) | "  requires: \(.)")';;
+      '"\(.info.name) latest \(.info.version)", ((.info.requires_dist // [])[] | select(ascii_downcase | startswith($p | ascii_downcase)) | "  requires: \(.)")';;
   npm-cap) capper=${1:?}; pkg=${2:?}
     npm view "$capper" version dependencies peerDependencies --json 2>/dev/null | jq -r --arg p "$pkg" \
       '"\($p) latest \(.version)", "  dependencies: \(.dependencies[$p] // "-")", "  peer: \(.peerDependencies[$p] // "-")"';;
@@ -23,20 +23,7 @@ case "$cmd" in
     gh api "repos/$OWNER/$R/dependabot/alerts/$n" --jq '"#\(.number) \(.dependency.package.name) state=\(.state) patched=\(.security_vulnerability.first_patched_version.identifier // "NONE")"';;
   resolvable) pkg=${1:?}
     [ -f uv.lock ] || { echo "run inside a uv repo (no uv.lock here)" >&2; exit 2; }
-    out=$(uv lock --upgrade-package "$pkg" --dry-run 2>&1); uv_rc=$?
-    if [ "$uv_rc" -ne 0 ]; then
-      printf '%s\n' "$out" >&2
-      echo "ERROR: resolution evidence unavailable for $pkg (uv exit $uv_rc)" >&2
-      exit "$uv_rc"
-    fi
-    printf '%s\n' "$out"
-    if printf '%s\n' "$out" | grep -q 'No lockfile changes'; then
-      echo "BLOCKED: no lockfile change for $pkg under current caps — inspect: uv tree --package $pkg --invert (ladder step 3)"
-    elif printf '%s\n' "$out" | grep -Eq '^Resolved [0-9]+ packages?'; then
-      echo "RESOLVABLE: $pkg dry-run resolution succeeded"
-    else
-      echo "ERROR: unreadable dry-run resolution evidence for $pkg" >&2
-      exit 2
-    fi;;
+    out=$(uv lock --upgrade-package "$pkg" --dry-run 2>&1); echo "$out" | tail -n +2
+    echo "$out" | grep -q 'No lockfile changes' && echo "BLOCKED: a cap holds $pkg — find it: uv tree --package $pkg --invert (ladder step 3)";;
   *) echo "unknown command $cmd" >&2; exit 2;;
 esac

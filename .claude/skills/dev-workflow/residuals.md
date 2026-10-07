@@ -34,7 +34,7 @@ that turns an operator typo into a refusal; a path realistic within the product'
 ## What needs Lin (everything else is yours; under full delegation inside its scope, all of it but a cross-phase move)
 A product or policy call (manual vs automated, what a customer is owed, what a plan includes); a never-auto surface the fix
 would touch (the triage recommends; the merge tier is his in default mode, yours under full delegation inside its scope; a
-migration alone is yours in default mode since 2026-10-04 — authority.md Delegation modes); anything you cannot state an impact sentence for
+migration alone is yours in default mode since 2026-10-04 — SKILL.md Delegation modes); anything you cannot state an impact sentence for
 but suspect matters — say "your call" with the reason, never a silent drop.
 
 ## Closing and building

@@ -21,19 +21,11 @@ sha=$(gh pr view "$n" --repo "$OWNER/$R" --json mergeCommit,state --jq 'if .stat
 title=$(gh pr view "$n" --repo "$OWNER/$R" --json title --jq .title)
 git -C "$repo_dir" fetch -q origin main
 git -C "$repo_dir" worktree add "$wt" -b "revert-$n" origin/main
-case "$R" in
-  NetPilot-2-Frontend|netpilot-marketing)
-    # Vercel checks the author identity; inherited author variables must not override it.
-    GIT_AUTHOR_NAME=lz-networks GIT_AUTHOR_EMAIL=50209324+lz-networks@users.noreply.github.com \
-    GIT_COMMITTER_NAME=lz-networks GIT_COMMITTER_EMAIL=50209324+lz-networks@users.noreply.github.com \
-      git -c user.name=lz-networks -c user.email=50209324+lz-networks@users.noreply.github.com \
-      -C "$wt" revert --no-edit "$sha" ;;
-  *) git -C "$wt" revert --no-edit "$sha" ;;
-esac
+git -C "$wt" revert --no-edit "$sha"
 git -C "$wt" push -u origin "revert-$n"
 url=$(gh pr create --repo "$OWNER/$R" --head "revert-$n" --base main \
   --title "Revert dep bump #$n: $title" \
   --body "Reverts #$n ($sha). Signal: $signal. Re-attempt trigger: recorded in the dependency-updates ledger (incident row). Endpoint: tiers.md §6.2.")
-env -u GH_TOKEN -u GITHUB_TOKEN gh pr comment "$url" --body "@codex review" > /dev/null
+gh pr comment "$url" --body "@codex review" > /dev/null
 echo "$url"
 echo "next: pr-gates.sh, merge per tiers §6.2, deploy watch, incident row + watch list (learning.md rubric e)"

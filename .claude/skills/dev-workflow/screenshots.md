@@ -48,9 +48,8 @@ downloaded — `chromium.launch({ channel: "chrome" })` drives the installed Chr
 click the container or `{force: true}` (FE PR#524). StrictMode double-mount: `test.md`.
 
 **Host** — build `{"encoding":"base64","content":…}` with python and pass `--input <file>`; `gh api -f content=@file` sends the
-literal string and every blob uploads identical (mkt PR#148). Reject the empty blob SHA
-`e69de29…` for every upload. Require different SHAs only when the intended source data differ;
-byte-identical states and before/after frames are legitimate when the source data match (FE PR#517). Raw URLs 404 for anonymous `curl` on a private
+literal string and every blob uploads identical (mkt PR#148). Assert per-file SHAs differ and none is the empty blob
+`e69de29…`; byte-identical before/after frames are legitimate (FE PR#517). Raw URLs 404 for anonymous `curl` on a private
 repo — verify with `gh api "repos/<o>/<r>/contents/<f>?ref=<sha>"`.
 
 **Production app frames (marketing)** — when the frame must show the real app with real data and no fixture rig exists, Lin signs
@@ -59,6 +58,6 @@ headless after) and every frame is masked in the DOM first: sidebar name + plan 
 naming a customer, removed before the shot (Lin's rule, no name or username in public content; mkt PR#243). Review each frame
 afterwards anyway. Rig facts for app.netpilot.io live in memory (`project-app-screenshot-rig`).
 
-**BEFORE tree** — read `origin`’s remote default branch first, then `git worktree add --detach …/<issue>-before origin/<default>`, served on the alternate port with the
+**BEFORE tree** — `git worktree add --detach …/<issue>-before origin/main`, served on the alternate port with the
 authorized-parties line — never `git stash` under a live dev server (FE PR#522, PR#528). Run the rig once per tree with two
 explicit commands; a `for run in …; do set -- $run` loop hits zsh's no-word-splitting (FE PR#558).

@@ -14,24 +14,10 @@ case "$eco" in
   *) echo "eco must be pypi or npm" >&2; exit 2;;
 esac
 [ -z "$ts" ] && { echo "no upload time for $pkg@$ver on $eco" >&2; exit 2; }
-t0=$(python3 - "$ts" <<'PYTIME'
-import datetime, sys
-try:
-    value = datetime.datetime.fromisoformat(sys.argv[1].replace('Z', '+00:00'))
-    if value.tzinfo is None: raise ValueError('upload time has no timezone')
-    print(value.timestamp())
-except ValueError as error:
-    print('invalid upload timestamp: ' + str(error), file=sys.stderr)
-    sys.exit(2)
-PYTIME
-) || exit 2
-now=$(date +%s) || exit 2
-age=$(python3 - "$now" "$t0" <<'PYAGE'
-import sys
-print(int((float(sys.argv[1]) - float(sys.argv[2])) // 86400))
-PYAGE
-) || exit 2
-echo "$pkg@$ver published $ts — ${age}d old (min $MIN_AGE_DAYS)"
+d=${ts%%T*}
+t0=$(date -j -f %Y-%m-%d "$d" +%s 2>/dev/null || date -d "$d" +%s)
+age=$(( ( $(date +%s) - t0 ) / 86400 ))
+echo "$pkg@$ver published $d — ${age}d old (min $MIN_AGE_DAYS)"
 if [ "$age" -lt "$MIN_AGE_DAYS" ]; then
   if [ "$sec" = --security ]; then echo "younger than the cooldown; allowed: security-driven"; exit 0; fi
   echo "BLOCKED: younger than the cooldown — wait, or pass --security when a CVE drives the bump"; exit 1
