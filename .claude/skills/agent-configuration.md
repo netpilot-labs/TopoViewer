@@ -16,8 +16,10 @@ second authoring location. Project application code stays in its product reposit
 
 Follow `dev-workflow` using a scratch clone of this repository. After review/checks and merge,
 pull the live source checkout and run `sync-all.sh`. Each changed consumer receives its own
-reviewed PR; its checked-in snapshot works on another machine or in a worktree without the
-canonical checkout. Local setup does not commit, change branches, merge, or push anything.
+reviewed PR. Profiles that install development skills carry a snapshot usable in another
+checkout without the canonical source. Backend intentionally installs zero local development
+skills; its development instructions require a separate canonical installation and an explicit
+`WORKSPACE` pointing to that installation’s project workspace. Local setup does not commit, change branches, merge, or push anything.
 
 `sync.sh <consumer-root>` retains the existing caller interface, including `netpilot-dev`’s
 wrapper. Profile inference uses installed metadata or the Git origin, so a worktree’s branch

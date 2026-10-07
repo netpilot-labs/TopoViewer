@@ -25,8 +25,8 @@ Draft pushes skip every CI job on the four main repos, so the loop runs CI-free.
 CI green is defined once, in SKILL.md (the two gates). Read it at job level (`gh api "repos/o/r/actions/runs?head_sha=<full
 oid>"`): `gh pr checks` lags a push and lies on a DIRTY PR.
 **A repo with NO CI workflows** (`gh api repos/<o>/<r>/actions/workflows --jq .total_count` = 0; netpilot-skills today): the CI
-half is the repo's own local check, run on the final tree and ATTESTED in the PR body as a line `local-check: <head7>
-<what ran>` — `pr-gates.sh` grants CI N/A only when that line names the CURRENT head as the 7-char short SHA
+half is the repo's own local check, run on the final tree and ATTESTED in the PR body as a standalone line
+`local-check: <head7> PASS: <named checks>` — `pr-gates.sh` grants CI N/A only when that affirmative line names the CURRENT head as the 7-char short SHA
 (a full 40-char SHA fails its match, skills#28 2026-09-28; a new push needs a new line) — `for f in $(git ls-files '*.sh'); do
 bash -n "$f" || exit 1; done` and `python3 -c 'import ast,sys; [ast.parse(open(f).read()) for f in sys.argv[1:]]' $(git ls-files
 '*.py')` (plus `scripts/lessons-lint.sh <clone>/dev-workflow` when that skill changed). Skip `ci-wait.sh` there (it waits 10 min for a run that cannot

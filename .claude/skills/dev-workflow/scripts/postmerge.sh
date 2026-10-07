@@ -178,15 +178,35 @@ case "$R" in
     railway_wait NetPilot-2-LB; [ $broken = 0 ] && probe_samples https://api.netpilot.io/health;;
   NetPilot-2-Frontend)
     vercel_wait https://app.netpilot.io/sign-in https://app.netpilot.io/version.json; sentry_new netpilot-frontend
-    # capture signal (mechanics §8): REVIEW on 0 events, "not configured" without a personal key — never red by itself
-    # posthog-signal.sh stays with dependency-updates (its owner); a consumer that does not vendor
-    # that skill (netpilot-dev) gets a note instead of a dead path (board 30 Phase 2, 2026-09-28).
+    # Strict frontend acceptance: real authenticated native pageview plus independent fresh ingestion.
     phs="$(dirname "$0")/../../dependency-updates/scripts/posthog-signal.sh"
-    if [ -x "$phs" ]; then
-      pout=$("$phs" --window 15m); prc=$?; say "$pout"
-      # the helper's status is the gate's (Codex, netpilot-skills PR#45): 2 = unavailable/failed → BROKEN; 1 = 0 events → REVIEW (exit 3)
-      case $prc in 2) say "BROKEN: posthog signal unavailable — no capture signal read"; broken=1;; 1) review=1;; esac
-    else say "posthog signal: dependency-updates/scripts/posthog-signal.sh not vendored here — skipped (a consumer without that skill runs no dependency gate)"; fi;;
+    browser="$(dirname "$0")/browser-capture-probe.py"
+    if [ "$outage" = 0 ] && [ "$red" = 0 ] && [ "$broken" = 0 ]; then
+      if [ ! -x "$phs" ] || [ ! -f "$browser" ]; then
+        say "BROKEN: required frontend capture verifier missing"; broken=1
+      else
+        pout=$(WORKSPACE="$ws" python3 "$browser" --check-config); prc=$?; say "$pout"
+        [ "$prc" = 0 ] && { pout=$(WORKSPACE="$ws" "$phs" --check-config); prc=$?; say "$pout"; }
+        if [ "$prc" != 0 ]; then say "BROKEN: frontend authenticated capture prerequisites unavailable"; broken=1
+        else
+          ph_since=$(date +%s)
+          ph_nonce=$(python3 -c 'import secrets; print(secrets.token_hex(16))') || { say "BROKEN: cannot create capture nonce"; exit 2; }
+          ph_url="https://app.netpilot.io/sign-in?netpilot_deploy_probe=$sha.$ph_nonce"
+          pout=$(WORKSPACE="$ws" python3 "$browser" "$ph_url" "$sha"); prc=$?; say "$pout"
+          if [ "$prc" != 0 ]; then say "BROKEN: authenticated native capture failed or owned-session revoke failed"; broken=1
+          else
+            for ph_attempt in $(seq 1 30); do
+              pout=$(WORKSPACE="$ws" "$phs" --since "$ph_since" --capture-url "$ph_url"); prc=$?
+              case "$prc" in
+                0) say "$pout"; break;;
+                1) [ "$ph_attempt" = 30 ] && { say "$pout"; review=1; break; }; sleep 30;;
+                *) say "$pout"; say "BROKEN: exact-nonce ingestion verification unavailable"; broken=1; break;;
+              esac
+            done
+          fi
+        fi
+      fi
+    fi;;
   netpilot-marketing)
     vercel_wait https://www.netpilot.io/;;
 esac

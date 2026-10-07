@@ -69,7 +69,7 @@
     ".claude/skills/agent-configuration.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "784403441f2724f2ae4fb882cad38be6f06f84027b7fd63743c02ace4e653a51",
+      "sha256": "847fe1a43c67162da3b9ac284fb6657caf6abffdf18497eb9ecddef7e652f5af",
       "source": "agent-configuration.md"
     },
     ".claude/skills/dependency-updates/SKILL.md": {
@@ -129,7 +129,7 @@
     ".claude/skills/dependency-updates/scripts/posthog-signal.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "9d8624163267ee066c786dea6ee0de61e3ae486c5a337c33f82b79a5bfecfa8e",
+      "sha256": "02bf25b1d20bd485108668ed0af36e2c4a9b4f104bc36560fd0a2118d550908f",
       "source": "dependency-updates/scripts/posthog-signal.sh"
     },
     ".claude/skills/dependency-updates/scripts/release-age.sh": {
@@ -183,7 +183,7 @@
     ".claude/skills/dev-workflow/deploy.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "de0744dddba92cba89e3b4d150bdd71906b0bcf6f0dab71c80ca828158a54bab",
+      "sha256": "5ff74f767c8bdb19fdfe091f8a5469a2b610933fdecb058024025a33e1df7a2e",
       "source": "dev-workflow/deploy.md"
     },
     ".claude/skills/dev-workflow/lane-brief.md": {
@@ -201,7 +201,7 @@
     ".claude/skills/dev-workflow/merge.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "4311e33d26df15be5c60755f3d45c9ae623e256538d0bacc79ea00cc772ef719",
+      "sha256": "563eb6531d5325dc448074673662e3b5531162f19ce656914e45e883320a6d7b",
       "source": "dev-workflow/merge.md"
     },
     ".claude/skills/dev-workflow/residuals.md": {
@@ -221,6 +221,18 @@
       "mode": 420,
       "sha256": "08fe966c7a8b94760d4c6efc5f00dc98c36f76272a70bac8e2cc2084f4986019",
       "source": "dev-workflow/screenshots.md"
+    },
+    ".claude/skills/dev-workflow/scripts/browser-capture-probe.py": {
+      "kind": "file",
+      "mode": 420,
+      "sha256": "63f2d414ba84761d016d5bb0c1856d792824d181c0f317f4918da7be499edb95",
+      "source": "dev-workflow/scripts/browser-capture-probe.py"
+    },
+    ".claude/skills/dev-workflow/scripts/ci-jobs.py": {
+      "kind": "file",
+      "mode": 493,
+      "sha256": "9026bb60f93b4bc756c30db228579ac2b572c774040927212a7752a0e5d2b99b",
+      "source": "dev-workflow/scripts/ci-jobs.py"
     },
     ".claude/skills/dev-workflow/scripts/ci-wait.sh": {
       "kind": "file",
@@ -243,7 +255,7 @@
     ".claude/skills/dev-workflow/scripts/loose-ends.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "cb8c2cd5df23b08aceac4a6f882124f7d18713307397c41ab59a4d813cdfc196",
+      "sha256": "970c10cab3ca3de0f3fa01b7867604da239c5b2856cb8d286e626bc53199adb1",
       "source": "dev-workflow/scripts/loose-ends.sh"
     },
     ".claude/skills/dev-workflow/scripts/merge-slot-selftest.sh": {
@@ -267,19 +279,19 @@
     ".claude/skills/dev-workflow/scripts/postmerge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "8376577390cdbf8d301ae6acfbfb25c65a5bf3007b192655b4bd5d504466c914",
+      "sha256": "2185e4a433ba73ce2abdc90c8788e46982c30ac77289fbe31f6c0e9d0fe92e74",
       "source": "dev-workflow/scripts/postmerge.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-gates.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "5bdbc9549a93df0d4db45c52632ab84220c8cb505a86e8a510010e9f81bf5ffd",
+      "sha256": "d7fe8f6b4b5415698417be8b52e74b2f645153e108ab4e71678a02cc4d6a30cc",
       "source": "dev-workflow/scripts/pr-gates.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-threads.py": {
       "kind": "file",
       "mode": 493,
-      "sha256": "9068f7cc84c562b3ca23a42a912f329460f22960d9b639a1c6ff857679aa67fb",
+      "sha256": "8fa9a187aa02920dafcbe4a9980df1ec19db2746cbf25713fc00a6fc831ea902",
       "source": "dev-workflow/scripts/pr-threads.py"
     },
     ".claude/skills/dev-workflow/scripts/preflight.sh": {
@@ -321,7 +333,7 @@
     ".claude/skills/dev-workflow/shell.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "fc2781ef164075e6f34ca0b282f478168c012cf2d4b7ce7884a95583bcd8c790",
+      "sha256": "075529808a45e3a9bb75e96b758663261c156152e20918c7714ea8c967868838",
       "source": "dev-workflow/shell.md"
     },
     ".claude/skills/dev-workflow/test.md": {
