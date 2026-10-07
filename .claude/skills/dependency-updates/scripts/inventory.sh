@@ -39,9 +39,8 @@ for R in $repos; do
     out=$(printf '%s\n' "$out" | jq -ce 'if type=="array" and all(.[]; type=="array") then [.[][]] else error("invalid paginated alerts") end') || {
       echo '  FINDING: alerts unavailable (unreadable paginated response)'; inventory_bad=2; out='[]'; }
   else
-    if [ "$R" = NetPilot-2-LB ] && printf '%s' "$out" | grep -q '"Not Found"'; then
-      echo '  alerts: API 404 — Dockerfile-only LB has no dependency graph';
-    else echo "  FINDING: alerts unavailable (${out%%$'\n'*})"; inventory_bad=2; fi
+    # A 404 can hide missing alert permission; repository readability does not prove absence.
+    echo "  FINDING: alerts unavailable (${out%%$'\n'*})"; inventory_bad=2
     out='[]'
   fi
   echo "$out" | jq -r '.[] | [.number, .security_advisory.severity, .dependency.package.name,

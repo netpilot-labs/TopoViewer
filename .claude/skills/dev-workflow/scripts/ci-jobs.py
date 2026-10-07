@@ -9,7 +9,7 @@ REQUIRED = {
     ('lz-networks/NetPilot-2-Frontend', '.github/workflows/test.yml'): ['Test & Type Check', 'Test Coverage'],
     ('lz-networks/netpilot-marketing', '.github/workflows/ci.yml'): ['Lint, Type Check & Build'],
     ('netpilot-labs/containerlab-mcp', '.github/workflows/test.yml'): ['lint', 'security', 'type-check', 'unit-tests', 'integration-tests'],
-    ('netpilot-labs/containerlab-mcp', '.github/workflows/cloud-release.yml'): ['build'],
+    ('netpilot-labs/containerlab-mcp', '.github/workflows/cloud-release.yml'): ['build', 'tools-list'],
     ('netpilot-labs/containerlab-mcp', '.github/workflows/onprem-bundle.yml'): ['build', 'install-test', 'install-test-connector-only', 'install-test-connector-bundle'],
     ('netpilot-labs/TopoViewer', '.github/workflows/ci.yml'): ['Go (gofmt, build, vet, test)', 'JS syntax (non-vendored)'],
 }

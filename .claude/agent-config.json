@@ -93,7 +93,7 @@
     ".claude/skills/dependency-updates/mechanics.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "96c864fc786302f65022b5102ddbf5aebf6ba47c57e2d8fb1f4efc3f6e79ef3f",
+      "sha256": "b74d3731c7939a69052499dec09ab65e7b073209f6af36fd7252c30fc43222ce",
       "source": "dependency-updates/mechanics.md"
     },
     ".claude/skills/dependency-updates/pass.md": {
@@ -117,7 +117,7 @@
     ".claude/skills/dependency-updates/scripts/inventory.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "dbc5b765ebe24b4c07edcb5f9918c04cb2f7d96a093bd0af86ca22615b262c82",
+      "sha256": "a6b2fbb1b6e238abdb8d7fcdd3fa02277b8df4bb6d10dba5a002b83c9c75a8de",
       "source": "dependency-updates/scripts/inventory.sh"
     },
     ".claude/skills/dependency-updates/scripts/lockdiff.sh": {
@@ -153,7 +153,7 @@
     ".claude/skills/dependency-updates/scripts/revert-pr.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "a7abd925093bd9294868fd69cc4cce2ba5fcb046a988a5a95d1242ffe7f1feed",
+      "sha256": "3dc332d03e77c93c289394ba734629ae8654c087b2e25b93eeddd4c0f6f85f27",
       "source": "dependency-updates/scripts/revert-pr.sh"
     },
     ".claude/skills/dependency-updates/scripts/trigger.sh": {
@@ -237,7 +237,7 @@
     ".claude/skills/dev-workflow/scripts/ci-jobs.py": {
       "kind": "file",
       "mode": 493,
-      "sha256": "8939334353af7b1c5ef984cb1e47a92d2009ab6dd20854e19d7a29bddeaf8b17",
+      "sha256": "8686b99b07aa375ad910d47345157471386f1bf9dbf91f7839ea5a4061f98726",
       "source": "dev-workflow/scripts/ci-jobs.py"
     },
     ".claude/skills/dev-workflow/scripts/ci-wait.sh": {
@@ -273,7 +273,7 @@
     ".claude/skills/dev-workflow/scripts/merge-slot-selftest.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "1014aaaba256c53b48a100f85d7c22bb42cf107c758d304679ba21c1b5051ee5",
+      "sha256": "ba65bc64543fad150dd4dad105dff273054c5fc483a421d0b84d7abd817e967e",
       "source": "dev-workflow/scripts/merge-slot-selftest.sh"
     },
     ".claude/skills/dev-workflow/scripts/merge-slot.sh": {
@@ -291,7 +291,7 @@
     ".claude/skills/dev-workflow/scripts/postmerge.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "88d1894416267feb38fb831ca4763e1c282544b6b0bae023b0621e45d21c9ec3",
+      "sha256": "79d221c606d4aaaa13852aa31e1161963ff99e898b9ea14d2a0a66ab1958fa7a",
       "source": "dev-workflow/scripts/postmerge.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-gates.sh": {

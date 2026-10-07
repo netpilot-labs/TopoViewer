@@ -149,6 +149,14 @@ railway_health() {
 deployment_identity() {  # called at signal acceptance and once more before clean settlement
   local live="" raw ids id candidate status
   case "$R" in
+    NetPilot-2-Frontend)
+      live=$(curl -fsS -m 15 -H "Cache-Control: no-cache" https://app.netpilot.io/version.json 2>/dev/null | python3 -c '
+import json,re,sys
+try:
+ sha=json.load(sys.stdin).get("version","")
+ if not isinstance(sha,str) or not re.fullmatch("[0-9a-fA-F]{40}",sha): raise ValueError("version")
+ print(sha)
+except (ValueError,TypeError,AttributeError): sys.exit(2)') || { say "BROKEN: current served frontend version unreadable at settlement"; broken=1; return; };;
     NetPilot-2-Backend|NetPilot-2-LB)
       raw=$(railway deployment list --service "$R" --limit 100 --json 2>/dev/null) || { say "BROKEN: latest served Railway deployment unreadable"; broken=1; return; }
       live=$(printf '%s' "$raw" | python3 -c '
@@ -263,7 +271,7 @@ vercel_wait() {  # route url [version-url]
   while :; do
     st=$(gh api "repos/$OWNER/$R/deployments/$id/statuses" --jq '.[0].state // "pending"')
     case "$st" in
-      success) say "vercel deployment $id: success"; if [ "$R" = netpilot-marketing ]; then deployment_identity; [ $broken = 0 ] && [ $review = 0 ] || return; fi; break;;
+      success) say "vercel deployment $id: success"; if [ "$R" = netpilot-marketing ]; then deployment_identity; fi; break;;
       failure|error) say "RED: vercel deployment $id: $st (the fix is NOT live)"; red=1; probe_samples "$1" 15; return;;
       *) [ $(date +%s) -gt $deadline ] && { say "BROKEN: vercel deployment $id still $st"; broken=1; return; }; sleep 20;;
     esac
@@ -297,10 +305,10 @@ sentry_new() {  # project slug
 case "$R" in
   NetPilot-2-Backend)
     # health is sampled after a FAILED/CRASHED deploy too: it decides roll back vs fix forward (Codex, skills PR#54)
-    railway_wait NetPilot-2-Backend; dep_red=$red; [ $broken = 0 ] && [ $review = 0 ] && { railway_health; [ $dep_red = 0 ] && [ $red = 0 ] && [ $broken = 0 ] && [ $review = 0 ] && main_run_wait; }
+    railway_wait NetPilot-2-Backend; dep_red=$red; railway_health; [ $dep_red = 0 ] && [ $red = 0 ] && [ $broken = 0 ] && [ $review = 0 ] && main_run_wait
     [ $outage = 0 ] && sentry_new netpilot-backend;;
   NetPilot-2-LB)
-    railway_wait NetPilot-2-LB; [ $broken = 0 ] && [ $review = 0 ] && railway_health;;
+    railway_wait NetPilot-2-LB; railway_health;;
   NetPilot-2-Frontend)
     vercel_wait https://app.netpilot.io/sign-in https://app.netpilot.io/version.json; [ $outage = 0 ] && sentry_new netpilot-frontend
     # capture signal (mechanics §8): REVIEW on 0 events, "not configured" without a personal key — never red by itself
@@ -352,7 +360,7 @@ case "$R" in
     vercel_wait https://www.netpilot.io/;;
 esac
 # Slow health, main CI, Sentry and capture reads can overlap another machine's deploy.
-case "$R" in NetPilot-2-Backend|NetPilot-2-LB|netpilot-marketing) [ $red = 0 ] && [ $broken = 0 ] && [ $review = 0 ] && deployment_identity;; esac
+case "$R" in NetPilot-2-Backend|NetPilot-2-LB|NetPilot-2-Frontend|netpilot-marketing) [ $red = 0 ] && [ $broken = 0 ] && [ $review = 0 ] && deployment_identity;; esac
 [ $outage = 1 ] && { say "RESULT: RED — production answers non-200 (health / route samples above): ROLL BACK first ($(dirname "$SLOT")/../../dependency-updates/scripts/revert-pr.sh, or git revert + self-merge; the platform rollback buys the minutes — deploy.md), then report"; exit 1; }
 # A failure next to an unread or unattributed impact signal is never called "no user impact" (Codex, skills PR#54)
 [ $red = 1 ] && [ $broken = 1 ] && { say "RESULT: RED — a deploy or main-run failure above AND a signal that could not be read (BROKEN line above): the impact is UNKNOWN — look by hand now; an outage or many users hit = roll back, else fix forward (deploy.md)"; exit 1; }

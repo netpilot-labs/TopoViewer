@@ -16,7 +16,7 @@ request=' '.join(sys.argv)
 if '/pulls' in request and '/commits/' in request: print(7)
 elif '/actions/workflows' in request: print(os.environ.get('STUB_WF','0'))
 elif '/jobs?' in request:
- names=['lint','security','type-check','unit-tests','integration-tests','build','Docs']
+ names=['lint','security','type-check','unit-tests','integration-tests','build','tools-list','Docs']
  print(json.dumps([{'jobs':[{'name':n,'status':'completed','conclusion':'success','head_sha':'a'*40} for n in names]}]))
 elif '/actions/runs?' in request:
  runs=[]
@@ -33,7 +33,7 @@ PYGH
 cat > "$T/bin/date" <<'SHDATE'
 #!/bin/sh
 if [ "${STUB_FAST_WAIT:-0}" = 1 ] && [ "$*" = '+%s' ]; then
-  f="$STUB_CLOCK_DIR/$PPID"; n=0; [ ! -f "$f" ] || n=$(cat "$f"); n=$((n+1)); echo "$n" > "$f"; echo $((1000+n*1600))
+  f="$STUB_CLOCK_DIR/watcher"; n=0; [ ! -f "$f" ] || n=$(cat "$f"); n=$((n+1)); echo "$n" > "$f"; echo $((1000+n*1600))
 else exec "$STUB_REAL_DATE" "$@"; fi
 SHDATE
 printf '#!/bin/sh\nexit 0\n' > "$T/bin/sleep"

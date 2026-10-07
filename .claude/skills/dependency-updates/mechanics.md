@@ -51,7 +51,7 @@ automatic review (BE#507 sat 22 days with zero reviews).
 
 ```bash
 gh pr edit $N --repo $O/$R --add-label origin/devops --add-label agent/<auto|hold>   # adoption labels (ratified 2026-09-09)
-gh pr comment $N --repo $O/$R --body "@codex review"
+env -u GH_TOKEN -u GITHUB_TOKEN gh pr comment $N --repo $O/$R --body "@codex review"
 <skills>/dev-workflow/scripts/pr-gates.sh $N --repo $O/$R --watch          # the Codex half
 t=$(date -u +%Y-%m-%dT%H:%M:%SZ); gh pr ready $N --repo $O/$R          # hand PRs only; Renovate PRs are already non-draft
 <skills>/dev-workflow/scripts/ci-wait.sh $N --repo $O/$R --since "$t"       # the CI half, then pr-gates again
@@ -72,8 +72,9 @@ created, so the merge-commit carve-out did not apply).
   head (the pre-rebase request is void). Provenance: pass-688 (2026-09-14) ticked BE#776 +
   FE#525, both rebased + merged clean ~10 min later, inside the Monday window. (And every
   merge in a repo re-stales the OTHER open PRs there — the next one needs its own rebase tick.)
-- Merge with `scripts/merge.sh` (it removes the worktree first, runs the at-merge base
-  check and the gate, squash-merges with `--delete-branch`, then `postmerge.sh`; it takes the repo's merge slot, shared
+- Merge with `scripts/merge.sh` (it retains the worktree, runs the canonical at-merge base
+  check and review/CI gates, squash-merges, then verifies `postmerge.sh` completion;
+  inspect and clean up the retained worktree only after that completion; it takes the repo's merge slot, shared
   with dev-workflow's `merge.sh` — after a non-clean watch the next merge there runs with `MERGE_SLOT_ACK=<that pr>` once
   the result is dispositioned, dev-workflow `merge.md`). No bare `gh pr merge` — it skips the slot: when this script
   cannot run, merge with dev-workflow's `merge.sh <o/r> <pr>` (base check, gate and slot included).

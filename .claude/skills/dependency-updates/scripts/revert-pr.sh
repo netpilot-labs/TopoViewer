@@ -34,6 +34,6 @@ git -C "$wt" push -u origin "revert-$n"
 url=$(gh pr create --repo "$OWNER/$R" --head "revert-$n" --base main \
   --title "Revert dep bump #$n: $title" \
   --body "Reverts #$n ($sha). Signal: $signal. Re-attempt trigger: recorded in the dependency-updates ledger (incident row). Endpoint: tiers.md §6.2.")
-gh pr comment "$url" --body "@codex review" > /dev/null
+env -u GH_TOKEN -u GITHUB_TOKEN gh pr comment "$url" --body "@codex review" > /dev/null
 echo "$url"
 echo "next: pr-gates.sh, merge per tiers §6.2, deploy watch, incident row + watch list (learning.md rubric e)"
