@@ -237,7 +237,7 @@
     ".claude/skills/dev-workflow/scripts/ci-wait.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "09454a3ffe9f1060602cf4660b9f5b9876f5c1a4161df7cb1e045201ace8486a",
+      "sha256": "293a391a2f63f9f4157a27d22dddd58d7cd8c4a84b4ba3d6b2b59e6d45f8688b",
       "source": "dev-workflow/scripts/ci-wait.sh"
     },
     ".claude/skills/dev-workflow/scripts/lane-audit.sh": {
@@ -291,7 +291,7 @@
     ".claude/skills/dev-workflow/scripts/pr-gates.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "fd17bdf934bb9e3f8a33157efb32bcd4b4390a455822abbeb65219d84aa8926a",
+      "sha256": "a564824c18195aebfa703cc63b8673b60328f306b8b2044808c9adfd0f828b2b",
       "source": "dev-workflow/scripts/pr-gates.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-threads.py": {
@@ -333,7 +333,7 @@
     ".claude/skills/dev-workflow/self-evolve.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "3ddb803b293c82d689270568a9740608f66c82acbf3ab9a71ba201437a619f74",
+      "sha256": "13e71a06ab7da9fdc356779d162ad98a4fda64d326786544e7d48b38e47ebc10",
       "source": "dev-workflow/self-evolve.md"
     },
     ".claude/skills/dev-workflow/setup.md": {
