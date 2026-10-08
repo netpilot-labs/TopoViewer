@@ -8,7 +8,7 @@ pass follows the same rule). The script's `RESULT` line names which signal fired
 - **Roll back first** — production is unavailable (health or the route load failing, the service not serving, a core flow —
   sign-in, chat, VM start, billing — failing for everyone) or MANY users are hit (count them: users/events on the new Sentry
   groups, the 5xx share in `railway logs`). `git revert`, self-merge, re-watch — the platform's one-click rollback buys the
-  minutes — then report to Lin with logs. Impact you cannot measure on a core flow counts as many.
+  minutes — then report to Lin with logs (Lin, 2026-10-01). Impact you cannot measure on a core flow counts as many.
   A probe sample with no HTTP answer (DNS, connect, timeout on this machine) is `BROKEN`, not an outage — probe from another
   network first; a RED next to a `BROKEN` or `REVIEW` line is impact UNKNOWN until that line is read (Sentry users/events).
 - **Fix forward** — everything else: a failed `main`-run test that shows no core flow broken (the real-Clerk job runs only

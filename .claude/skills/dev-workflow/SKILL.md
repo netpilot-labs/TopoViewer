@@ -57,7 +57,7 @@ Dev flow:
 - [ ] 4  Commit as lz-networks, push, DRAFT PR whose body has "Scope and accepted limits", `@codex review` + pr-gates.sh --watch (review.md)
 - [ ] 5  Disposition every finding; push → re-request → re-arm; round 5 = disposition table + decision in ONE comment, no round 6 without it (review.md)
 - [ ] 6  Guardrail check on the actual DIFF: a never-auto surface demotes to agent/hold (default mode)
-- [ ] 7  gh pr ready → explicit `@codex review` → ci-wait.sh --since <t> (no-CI repo: pr-gates.sh) (merge.md)
+- [ ] 7  merge.sh --dry-run (main moved → rebase, re-verify, dry-run again) → gh pr ready → explicit `@codex review` → ci-wait.sh --since <t> (no-CI repo: pr-gates.sh) (merge.md)
 - [ ] 8  merge.sh --dry-run: base check + merge-ref + gates read; main moved → rebase + re-verify (merge.md)
 - [ ] 9  Endpoint: auto = merge.sh (runs from anywhere) · hold = PR-ready report, stop (full delegation in scope: merge.sh)
 - [ ] 10 postmerge.sh <repo> <merge-sha> (every repo; a no-deploy repo then does its own step, deploy.md); exit 1 → impact decides: outage or many users = roll back, else fix forward (deploy.md)

@@ -18,8 +18,10 @@ Contents: the loop · reading the verdict · disposition (exposure test, the fou
    After every push the last two actions are: re-request, then re-arm the watcher (BE#308) — arm only once
    `gh pr view --json headRefOid` reads the pushed SHA: the API lagged ~40 s and armed a stale head three times
    (BE PR#915, 2026-09-29).
-3. Triage each finding (below), push fixes, then reply + resolve with `scripts/pr-threads.py <owner/repo> <pr> <sha> replies.json`
-   (`pr-threads.py <owner/repo> <pr> --dry-run` — two args, no sha, no replies path — lists thread ids) — only after
+3. Triage each finding (below), push fixes, then reply + resolve with `scripts/pr-threads.py <owner/repo> <pr> <oid> replies.json`
+   (`<oid>` = the full 40-char head from `--json headRefOid` — head7 is refused, the opposite of merge.md's `local-check` line,
+   skills PR#200; replies.json is an OBJECT keyed by comment id, shape in its header — not an array, netpilot-dev PR#4;
+   `pr-threads.py <owner/repo> <pr> --dry-run` — two args, no oid, no replies path — lists thread ids) — only after
    `git diff --stat HEAD~1` lists every file the replies claim.
 4. `pr-gates.sh <n>` READY = verdict on head + 0 unresolved + CI green (+ latest request answered, non-draft). READY means
    dispositioned, never zero findings — read the substance. **A clean pass never retracts an open finding from an earlier pass on
@@ -31,19 +33,24 @@ Contents: the loop · reading the verdict · disposition (exposure test, the fou
 ## Reading the verdict (encoded in the script; audit its answer with these)
 - Three channels: a formal review on the head (findings, P1–P3 inline threads); a clean ISSUE comment `Codex Review: Didn't
   find any major issues` carrying `Reviewed commit: <10-char sha>`; or inline threads only. `gh pr view --json comments` is
-  issue comments ONLY — a PR with findings shows nothing there. Never say "no verdict" without the three-channel read.
+  issue comments ONLY — a PR with findings shows nothing there. Never say "no verdict" without the three-channel read
+  (`pr-gates.sh` channels 1–3; BE#308).
 - **A review can also arrive as ONE issue comment that carries the findings** (`### 💡 Codex Review`, a P-badge and a blob
   link each, no threads): the script counts them and stays NOT READY until a fix push or a comment line
   `codex-comment-findings: <head7> dispositioned` + the per-finding dispositions. Read the verdict comment itself before
   any closure comment — it was matched as the clean pass and "READY" was repeated over six P2s (skills PR#60 R6).
 - A "Codex Review Summary" issue comment (🔄 Running → ✅ Completed, 7-char sha) is Codex's STATUS line, not a verdict —
   the script ignores it by design (PR #21, 2026-09-28).
-- Match the head as a short-sha PREFIX, the login by substring (`test("codex")`), `--paginate` the per-PR endpoints, never the
-  repo-wide comments endpoint (BE#818).
 - 👀 on the request = picked up (verdict ~2–15 min); no 👀 after ~5 min = re-request; 👀 is removed when done. Codex OFTEN
-  auto-reviews a push but not always — a pushed head is unreviewed until a verdict on it exists. "Something went wrong" /
-  "usage limits" comments are transient — re-request.
+  auto-reviews a push but not always — a pushed head is unreviewed until a verdict on it exists. "Something went wrong" is
+  transient — re-request once. **"You have reached your Codex usage limits" is the shared review quota, spent until it resets:**
+  no re-request — `pr-gates.sh` exits NOT READY on it (five re-requests got five copies, netpilot-dev PR#4, 2026-10-07) — post ONE hold comment naming it, and
+  report the state `pr-gates.sh` prints — PR-ready only with a verdict already on the head, else NOT READY until the quota resets
+  and one lands; never merged past it. The wave budgets its rounds (lanes.md).
 - **Repeated re-requests with no 👀 = Codex is down: HOLD.** No delegation breadth covers a reviewer outage (Lin, 2026-08-19).
+- **`pr-gates.sh` BROKEN on its OWN re-request can be GitHub, not Codex:** comment writes answered HTTP 500 for ~4 min with no
+  status incident (skills PR#200, 2026-10-07). Not a reviewer outage — post the `@codex review` by hand once a write lands,
+  then re-arm the watcher.
 - A round is a ~20-min wait: push and request before a pass ends; never re-request an unchanged, reviewed head (the post-flip
   request in `merge.md` is the one exception).
 - A finding that assumes CLI/API/library behavior: validate at the cheapest tier before acting (`probe-testing`).

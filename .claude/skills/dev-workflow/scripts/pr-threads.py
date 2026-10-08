@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reply to + resolve Codex review threads on a PR, keyed by inline-comment database id.
 
-usage: pr-threads.py <owner/repo> <pr> <sha> <replies.json>
+usage: pr-threads.py <owner/repo> <pr> <sha> <replies.json>   # <sha> = the full 40-char head oid (head7 is refused)
        pr-threads.py <owner/repo> <pr> --dry-run      # 2 args only — do NOT pass a
                                                       # replies path (/dev/null is not
                                                       # valid JSON and raises)

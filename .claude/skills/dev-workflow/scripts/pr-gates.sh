@@ -291,6 +291,15 @@ report() {
         |select(.body|test(\"Something went wrong\";\"i\"))
         |select(.body|contains(\"$head10\"))
         |select(.createdAt > \"$reqts\")]|length")"
+  # "usage limits" is the shared review quota, spent until it resets — a re-request only mints another copy (five on
+  # netpilot-dev PR#4, 2026-10-07). Matched by the reply's canonical opening line and never on a comment naming a head
+  # (a real verdict can QUOTE the phrase); `>=` because GitHub timestamps to the second and an instant reply can share
+  # the request's second (PR #197 R2, R4).
+  CODEX_QUOTA="$(gq "[.data.repository.pullRequest.comments.nodes[]
+        |select(.author.login|IN(\"chatgpt-codex-connector\",\"chatgpt-codex-connector[bot]\"))
+        |select(.body|test(\"^\\\\s*You have reached your Codex usage limits\";\"i\"))
+        |select(.body|test(\"Reviewed commit\")|not)
+        |select(.createdAt >= \"$reqts\")]|length")"
 
   # --- CHANNEL 3: threads-only round (no review body, no comment) --------
   local c3 c3head
@@ -487,7 +496,7 @@ escalate_if_no_ack() {
         echo "BROKEN: the re-request was posted but is not visible after 60 s — trust nothing"; [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL BROKEN"; exit 2
       fi
     else
-      echo "BROKEN: could not post the no-ack re-request (auth? rate limit?) — trust nothing"; [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL BROKEN"; exit 2
+      echo "BROKEN: could not post the no-ack re-request (auth? rate limit? GitHub 500?) — trust nothing; a GitHub write outage (HTTP 500 on comment writes, skills PR#200) reads the same: post @codex review by hand when a write lands, then re-arm"; [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL BROKEN"; exit 2
     fi
   fi
 }
@@ -504,6 +513,7 @@ decide() {
   local why=""
   [ "$VERDICT_ON_HEAD" = 0 ] && why="$why; no Codex verdict on the current head"
   [ "${CODEX_FAILED:-0}" -gt 0 ] && why="$why; Codex round FAILED after the latest request (\"Something went wrong\") — re-request; a reviewer outage is never risk-accepted"
+  [ "${CODEX_QUOTA:-0}" -gt 0 ] && why="$why; Codex answered \"usage limits\" after the latest request — the shared quota is spent: HOLD, no re-request (review.md)"
   [ "$VERDICT_ON_HEAD" = 1 ] && [ "$fresh" = 0 ] && why="$why; verdict predates the latest @codex request — the post-flip/pending round is unanswered (merge.md, The flip)"
   [ "$UNRES" != 0 ] && why="$why; $UNRES unresolved thread(s) — disposition each ONE BY ONE"
   [ "${CF_OPEN:-0}" = unreadable ] && why="$why; the read of findings carried in Codex comments FAILED — trust nothing, re-run"
@@ -583,6 +593,12 @@ while :; do
     [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL NOT READY (codex round failed)"
     exit 1
   fi
+  # The quota reply adds no 👀, so the loop would otherwise re-request at 5 min — the exact repeat review.md forbids.
+  if [ "${CODEX_QUOTA:-0}" -gt 0 ] && [ "$POSTREQ" != 1 ]; then
+    echo "NOT READY; Codex answered \"usage limits\" after the latest request — the shared quota is spent: HOLD, no re-request (review.md)"
+    [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL NOT READY (codex quota)"
+    exit 1
+  fi
   ELAPSED=$(( $(date +%s) - START ))
   # A loop counter is not a clock (deploy.md) — escalate on real elapsed.
   [ "$PF_REREQ" = 0 ] && [ "$ELAPSED" -ge 300 ] && [ $(( ELAPSED % 300 )) -lt 60 ] && escalate_if_no_ack "$REQTS"   # silent once the #22 re-request is out
@@ -614,7 +630,7 @@ while :; do
           echo "BROKEN: the re-request was posted but is not visible after 60 s — trust nothing"; [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL BROKEN"; exit 2
         fi
       else
-        echo "BROKEN: could not post the post-flip re-request (auth? rate limit?) — trust nothing"; [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL BROKEN"; exit 2
+        echo "BROKEN: could not post the post-flip re-request (auth? rate limit? GitHub 500?) — trust nothing; a GitHub write outage (HTTP 500 on comment writes, skills PR#200) reads the same: post @codex review by hand when a write lands, then re-arm"; [ "$WAITCI" = 1 ] && echo "ci-wait: FINAL BROKEN"; exit 2
       fi
     fi
   fi
