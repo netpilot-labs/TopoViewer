@@ -56,3 +56,8 @@ dgf-nsp/**
 .cache/**
 
 vscode-extension/*
+
+# Shared-agent links installed from netpilot-skills
+/.agents/skills/
+/.claude/agent-config.json
+/.claude/skills/

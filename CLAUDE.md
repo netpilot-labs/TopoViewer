@@ -1,13 +1,13 @@
-<!-- Generated from netpilot-skills/workspaces/topoViewer/CLAUDE.md; edit the source path recorded in .claude/agent-config.json, then run canonical scripts/agent-config.py sync. -->
 # TopoViewer - Agent Guide
 
 ## Agent configuration source
 
-Maintain this instruction file at `netpilot-skills/workspaces/topoViewer/CLAUDE.md`.
-Use `.claude/agent-config.json` to find each skill, reference and agent script’s mapped source
-in `/Users/linzhu/agent-config` (`lz-networks/netpilot-skills`). Edit and review those sources,
-then regenerate consumer snapshots; consumer files and Codex aliases share the same content.
-Project code, worklogs and operational records remain in their owning repository.
+This repository owns `CLAUDE.md`; both Claude and Codex edit it directly. `AGENTS.md`
+is a relative link to this file. Shared skills, references and agent scripts are maintained
+in `/Users/linzhu/agent-config` (`lz-networks/netpilot-skills`); edit their canonical targets.
+`.agent-profile.json` selects this project’s linked installation. Setup/check repairs or
+verifies links; shared skill updates require no copied-file commits in this repository.
+Project code, worklogs and operational records remain here.
 
 
 ## What is TopoViewer?
