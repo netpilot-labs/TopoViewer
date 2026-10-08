@@ -373,6 +373,9 @@ report() {
   # CI is not green — a head with no run at all fails this gate.
   local runs a b sel
   sel="select(.name!=\"Vercel\")|select(any(.pull_requests[]?; .number == $PR))"
+  # An unparseable `--since` fails closed: an empty bound would admit every historical run (Codex skills PR#208 R1).
+  [ -n "$SINCE" ] && { python3 -c "import sys,datetime;datetime.datetime.fromisoformat(sys.argv[1].replace('Z','+00:00'))" "$SINCE" 2>/dev/null \
+    || { echo "BROKEN: unparseable --since '$SINCE' (ISO-8601 UTC like 2026-10-08T03:01:44Z)"; exit 2; }; }
   [ -n "$SINCE" ] && sel="$sel|select(.created_at >= \"$SINCE\")"  # runs from BEFORE the triggering action do not count; >= keeps a run minted in the same second as `t` (PR #23 R2)
   read_runs() {
     local data rows path run_id status conclusion proof rc
