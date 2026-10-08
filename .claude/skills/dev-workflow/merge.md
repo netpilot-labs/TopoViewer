@@ -4,9 +4,13 @@ Contents: the flip · CI never ran · base check · merging · migrations at mer
 
 ## The flip (draft → ready)
 Draft pushes skip every CI job on the four main repos, so the loop runs CI-free. Once Codex is dispositioned:
-1. Main moved while the PR was a draft? Rebase FIRST: the flip's one CI run is then newer than main's tip and step 8's base
-   check passes with no second CI + Codex round (BE PR#956). `t=$(date -u +%FT%TZ)` — taken BEFORE the action, never from
-   memory (2026-09-09) — then `gh pr ready <n>`.
+1. `merge.sh o/n <n> --dry-run` BEFORE the flip (its base check runs on a draft) and read its BASE line, not its exit: on the
+   four main repos a draft's dry-run always ends `NOT MERGED pr-gates` (no CI yet — expected); a `base is N commit(s) behind`
+   FINAL ends the chain there — rebase, push, re-request, dry-run again; `gh pr ready` only after a dry-run that printed
+   `base check — head contains <base> tip` (a chain that merely PRINTED the main-moved line flipped first and spent the
+   post-flip round on a stale base, skills PR#189, 2026-10-07). Rebased first, the flip's one CI run is newer than main's tip and step 8's base check passes with no second
+   CI + Codex round (BE PR#956). `t=$(date -u +%FT%TZ)` — taken BEFORE the action, never from memory (2026-09-09) — then
+   `gh pr ready <n>`.
 2. The flip mints a fresh Codex round only sometimes; force it with an explicit `@codex review` after the flip (4/4 PRs silent,
    2026-08-22). The gate holds until that request is answered (Lin, 2026-08-22). 👀 with no answer after ~15 min on a head that
    already carries a draft-phase verdict: post ONE more `@codex review`; unanswered for another ~15 min → report to Lin
@@ -22,6 +26,9 @@ Draft pushes skip every CI job on the four main repos, so the loop runs CI-free.
    back with `gh pr ready --undo`. After ANY push, wait for
    that head's run to appear before `gh pr ready` — a flip seconds after a push gets its run cancelled by the concurrency group
    (BE PR#764).
+A repo whose workflow fires on DRAFT pushes too (`on: pull_request` with no `types` filter — TopoViewer `ci.yml`) mints nothing
+at the flip: `ci-wait.sh --since <flip t>` exits 3 on a head whose run is already green. The draft-era run is still not the
+gate (SKILL.md): take `t`, close/reopen the PR for a fresh run, `ci-wait.sh --since <t>` (TopoViewer PR#17, 2026-10-07).
 CI green is defined once, in SKILL.md (the two gates). Read it at job level (`gh api "repos/o/r/actions/runs?head_sha=<full
 oid>"`): `gh pr checks` lags a push and lies on a DIRTY PR.
 **A repo with NO CI workflows** (`gh api repos/<o>/<r>/actions/workflows --jq .total_count` = 0; netpilot-skills today): the CI

@@ -171,7 +171,7 @@
     ".claude/skills/dev-workflow/SKILL.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "196e0157240083cba20492c4c3fbf5cf3044285ffbd116660e2c8e7ca2bc5a83",
+      "sha256": "78680d07a42001138cd8a9dbf16a6ff9cfec876770295034f7af111ac750bdaf",
       "source": "dev-workflow/SKILL.md"
     },
     ".claude/skills/dev-workflow/build.md": {
@@ -183,7 +183,7 @@
     ".claude/skills/dev-workflow/deploy.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "a9b965cd41db8a320e195e9f5e8e6ef1d4e659981a59174806ffe9344e8b68aa",
+      "sha256": "82b6ad676b23d29fe0af8ac16ba20ed2926855581576a7285e2ab118411fadb2",
       "source": "dev-workflow/deploy.md"
     },
     ".claude/skills/dev-workflow/lane-brief.md": {
@@ -195,13 +195,13 @@
     ".claude/skills/dev-workflow/lanes.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "11e672243ac36a52efbe0378a42604d979f10d77fd75fcf3e5571e6592dea988",
+      "sha256": "a4fa12b6de8feb244f5862a8b03a7d74a8532fd4c6a1e14139e2d0c1301b987e",
       "source": "dev-workflow/lanes.md"
     },
     ".claude/skills/dev-workflow/merge.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "3eec8cc25df2f91eb5c833ac8b69c5e14413c7d2aa480bf989b540e23d9033ea",
+      "sha256": "869687a13beb9963a56296b94a29fe1b17db63af2f286c1324244d073a7a323f",
       "source": "dev-workflow/merge.md"
     },
     ".claude/skills/dev-workflow/residuals.md": {
@@ -213,7 +213,7 @@
     ".claude/skills/dev-workflow/review.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "ac2a6f7d783f77df95951d7f28f5280ccd58208829625dd4af7d194faf443099",
+      "sha256": "bb2318495a4174c21718084b5dffad6de494450e7fff6209ecf47b2a3e598e31",
       "source": "dev-workflow/review.md"
     },
     ".claude/skills/dev-workflow/screenshots.md": {
@@ -291,13 +291,13 @@
     ".claude/skills/dev-workflow/scripts/pr-gates.sh": {
       "kind": "file",
       "mode": 493,
-      "sha256": "d7fe8f6b4b5415698417be8b52e74b2f645153e108ab4e71678a02cc4d6a30cc",
+      "sha256": "fd17bdf934bb9e3f8a33157efb32bcd4b4390a455822abbeb65219d84aa8926a",
       "source": "dev-workflow/scripts/pr-gates.sh"
     },
     ".claude/skills/dev-workflow/scripts/pr-threads.py": {
       "kind": "file",
       "mode": 493,
-      "sha256": "8fa9a187aa02920dafcbe4a9980df1ec19db2746cbf25713fc00a6fc831ea902",
+      "sha256": "f8ad93e5c709677b9a0e98dfec310e94e8ebf9ddd560259780963496fc64c9bf",
       "source": "dev-workflow/scripts/pr-threads.py"
     },
     ".claude/skills/dev-workflow/scripts/preflight.sh": {
@@ -333,7 +333,7 @@
     ".claude/skills/dev-workflow/self-evolve.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "6add662c1b4578a989393bdd489301623199292637f9bed47520488bb9bea70b",
+      "sha256": "3ddb803b293c82d689270568a9740608f66c82acbf3ab9a71ba201437a619f74",
       "source": "dev-workflow/self-evolve.md"
     },
     ".claude/skills/dev-workflow/setup.md": {
@@ -345,7 +345,7 @@
     ".claude/skills/dev-workflow/shell.md": {
       "kind": "file",
       "mode": 420,
-      "sha256": "436a97a60c1e951adb54c1cb4908389413c28808f68cc10a7e8a057c1868b434",
+      "sha256": "f0f6f24cc6c489fb71d9a02200c41768b0d0038e54e90a8cf7f3bd8feae6cf17",
       "source": "dev-workflow/shell.md"
     },
     ".claude/skills/dev-workflow/test.md": {

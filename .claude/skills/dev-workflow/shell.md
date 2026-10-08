@@ -36,6 +36,9 @@ The harness runs every command through a zsh `eval` on macOS; all of these are v
   `h=$(git hash-object --no-filters <path>) || exit 1; [ "$(git rev-parse -q --verify <ref>:<path>)" = "$h" ] || exit 1` (a
   missing ref path yields an empty string, never a match; a bare `git show … | cmp -s - <path>` reports a MATCH when the ref
   is unreadable and the local file empty) (the ten consumer-snapshot lanes, 2026-10-07; Codex R1–R6).
+- **`cp` onto an EXISTING file keeps the destination's mode** (macOS, verified: 755 onto 644 stays 644; onto an absent path the
+  source mode copies): a sync-written executable arrives non-executable in the worktree — `cp -p`, then `git diff --summary |
+  grep mode` before the push (clab PR#278, 2026-10-07).
 - **Never hand-type a 40-char oid** — capture it (`git rev-parse HEAD`, `--json headRefOid`) (FE#309, BE#410).
 - **`gh issue view <n> --comments` in this non-TTY harness prints the comments WITHOUT the issue body, and nothing at all
   (exit 0) for an issue that has no comment** — it reads like a failed fetch or an empty issue. Read an issue with

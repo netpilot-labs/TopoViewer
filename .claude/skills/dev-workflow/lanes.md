@@ -12,6 +12,15 @@ report format); `scripts/lane-audit.sh` checks the lanes' leftovers afterwards (
   (agents drop trailing steps first); judges and graders run in the lane's FOREGROUND (`run_in_background: false`, BE#711);
   a lane that owns only SOME steps of an issue gets its own sub-issue to close — `Closes` on the shared one would
   close it under the sibling steps (clab#262).
+- **A brief's repo facts are READ at step 1, never copied from a list** (the 2026-10-07 snapshot wave, 9 repos): CI presence by
+  `gh api repos/o/r/actions/workflows --jq .total_count` (four of nine had 0 against a brief listing CI; netpilot-dev PR#4) and,
+  when nonzero, the workflow files' `on:` — only a `pull_request` trigger is PR CI; the change set by byte-check (shell.md)
+  against the FETCHED remote default branch (`origin/<default>`, setup.md — TopoViewer's is `development`), never the working
+  copy (a lagging main checkout listed files already merged, lead-desk PR#13); generated paths = manifest entries whose hash
+  matches the working copy, not a path filter (netpilot-dev's README.md was missed) + paths only the base manifest lists (deletions, R2).
+- **A wave shares ONE Codex review quota:** three skills PRs (21 rounds) plus 10 parallel lanes spent it by 11:44Z
+  (netpilot-dev PR#4, 2026-10-07; five re-requests answered "usage limits"). Size a wave or stagger its flips by that count, and
+  brief the lane: on that answer hold at the gate state `pr-gates.sh` prints, one comment, no re-request (review.md).
 - **The brief names every shared resource with its wrapper** (nine lanes at once, board 31, 2026-10-02): the local Postgres
   → `<skill-dir>/scripts/with-db-lock.sh <issue-id> …` (absolute path) around every backend suite and probe run, ONE hold per step, launched in the
   background with the longest timeout (its header has the why); a shared bench → the lane's lab-name prefix and the
