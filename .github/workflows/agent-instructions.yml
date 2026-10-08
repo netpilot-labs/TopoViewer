@@ -1,0 +1,31 @@
+# Generated from canonical netpilot-skills; update the release pin there.
+name: Agent instructions
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [development]
+permissions:
+  contents: read
+concurrency:
+  group: agent-instructions-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  agent-instructions:
+    name: Agent instructions
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch and verify shared checker
+        env:
+          CHECKER_URL: https://gist.githubusercontent.com/lz-networks/f430d42eef01bd9bcdbac8e80518d3a5/raw/48e6b55460daeaf783fa3120dd7f388ccb9354d5/agent-instructions-check.py
+          CHECKER_SHA256: 7e9915417cdc136557a6e183726c5d3451f033c9185cfb60f5c393c1cfa18903
+        run: |
+          curl --fail --silent --show-error --location --retry 3 "$CHECKER_URL" --output "$RUNNER_TEMP/agent-instructions-check.py"
+          echo "$CHECKER_SHA256  $RUNNER_TEMP/agent-instructions-check.py" | sha256sum -c -
+      - name: Validate project instructions
+        run: python3 "$RUNNER_TEMP/agent-instructions-check.py" --root "$GITHUB_WORKSPACE" --budget 32768 --advisory 24576
