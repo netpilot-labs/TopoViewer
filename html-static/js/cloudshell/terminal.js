@@ -153,6 +153,11 @@
 			// Dell SmartFabric OS10: admin/admin (containerlab-injected, vrnetlab-created;
 			// live-login verified on bench 2026-08-22)
 			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+		} else if (nodeKind === 'mikrotik_ros') {
+			// MikroTik RouterOS CHR: admin/admin (containerlab-injected, set by the
+			// NetPilot launcher at boot; live-login verified on bench 2026-10-10,
+			// containerlab-mcp#288)
+			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'sonic-vs') {
 			// SONiC community VS: admin/YourPaSsWoRd (created by the NetPilot init
 			// script — containerlab registers no credentials for the kind;
