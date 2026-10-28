@@ -813,58 +813,57 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
     });
 
-    // Toggle the Panel(s) when clicking on the cy container
-    document.getElementById("cy").addEventListener("click", async function (event) {
+    // Toggle the Panel(s) when tapping the cy background. Cytoscape `tap`
+    // fires for mouse and touch alike; a DOM `click` on the container never
+    // arrives on touch (Cytoscape preventDefaults touchend) (TopoViewer#31).
+    cy.on("tap", async function (event) {
+        if (event.target !== cy) return;
 
         console.info("cy container clicked init");
         console.info("isPanel01Cy: ", isPanel01Cy);
         console.info("nodeClicked: ", nodeClicked);
         console.info("edgeClicked: ", edgeClicked);
 
-        // This code will be executed when you click anywhere in the Cytoscape container
-        // You can add logic specific to the container here
+        // Only a background tap reaches here (target check above), so the
+        // nodeClicked/edgeClicked flags are no longer needed as a gate.
+        if (!isPanel01Cy) {
+            console.info("!isPanel01Cy: ");
+            // Remove all Overlayed Panel
+            // Get all elements with the class "panel-overlay"
+            var panelOverlays = document.getElementsByClassName("panel-overlay");
 
-        if (!nodeClicked && !edgeClicked) {
-            console.info("!nodeClicked  -- !edgeClicked");
-            if (!isPanel01Cy) {
-                console.info("!isPanel01Cy: ");
-                // Remove all Overlayed Panel
-                // Get all elements with the class "panel-overlay"
-                var panelOverlays = document.getElementsByClassName("panel-overlay");
+            console.info("panelOverlays: ", panelOverlays);
 
-                console.info("panelOverlays: ", panelOverlays);
-
-                // Loop through each element and set its display to 'none'
-                for (var i = 0; i < panelOverlays.length; i++) {
-                    console.info
-                    panelOverlays[i].style.display = "none";
-                }
-
-                var viewportDrawer = document.getElementsByClassName("viewport-drawer");
-                // Loop through each element and set its display to 'none'
-                for (var i = 0; i < viewportDrawer.length; i++) {
-                    viewportDrawer[i].style.display = "none";
-                }
-
-                // display none each ViewPortDrawer Element, the ViewPortDrawer is created during DOM loading and styled as display node initially
-                var ViewPortDrawerElements =
-                    document.getElementsByClassName("ViewPortDrawer");
-                var ViewPortDrawerArray = Array.from(ViewPortDrawerElements);
-                ViewPortDrawerArray.forEach(function (element) {
-                    element.style.display = "none";
-                });
-
-            } else {
-                removeElementById("Panel-01");
-                appendMessage(`"try to remove panel01-Cy"`);
+            // Loop through each element and set its display to 'none'
+            for (var i = 0; i < panelOverlays.length; i++) {
+                console.info
+                panelOverlays[i].style.display = "none";
             }
+
+            var viewportDrawer = document.getElementsByClassName("viewport-drawer");
+            // Loop through each element and set its display to 'none'
+            for (var i = 0; i < viewportDrawer.length; i++) {
+                viewportDrawer[i].style.display = "none";
+            }
+
+            // display none each ViewPortDrawer Element, the ViewPortDrawer is created during DOM loading and styled as display node initially
+            var ViewPortDrawerElements =
+                document.getElementsByClassName("ViewPortDrawer");
+            var ViewPortDrawerArray = Array.from(ViewPortDrawerElements);
+            ViewPortDrawerArray.forEach(function (element) {
+                element.style.display = "none";
+            });
+
+        } else {
+            removeElementById("Panel-01");
+            appendMessage(`"try to remove panel01-Cy"`);
         }
         nodeClicked = false;
         edgeClicked = false;
     });
 
     // Listen for tap or click on the Cytoscape canvas
-    cy.on('click', async (event) => {
+    cy.on('tap', async (event) => {
         // Usage: Initialize the listener and get a live checker function
         const isViewportDrawerClabEditorCheckboxChecked = setupCheckboxListener('#viewport-drawer-clab-editor-content-01 .checkbox-input');
         if (event.target === cy && shiftKeyDown && isViewportDrawerClabEditorCheckboxChecked) { // Ensures Shift + click/tap and the isViewportDrawerClabEditorCheckboxChecked 
@@ -912,7 +911,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
 
     // Click event listener for nodes
-    cy.on("click", "node", async function (event) {
+    cy.on("tap", "node", async function (event) {
 
 
         console.info("node clicked init");
@@ -1045,7 +1044,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
 
     // Click event listener for edges
-    cy.on("click", "edge", async function (event) {
+    cy.on("tap", "edge", async function (event) {
 
         console.info("edge clicked init");
         console.info("isPanel01Cy: ", isPanel01Cy);
