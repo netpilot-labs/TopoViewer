@@ -158,6 +158,11 @@
 			// NetPilot launcher at boot; live-login verified on bench 2026-10-10,
 			// containerlab-mcp#288)
 			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+		} else if (nodeKind === 'juniper_vjunosrouter' || nodeKind === 'juniper_vjunosswitch') {
+			// Juniper vJunos-router / vJunos-switch: admin/admin@123 (containerlab's
+			// default credentials for both kinds, nodes/vr_vjunosswitch, passed to the
+			// vrnetlab launcher as --username/--password)
+			terminalCommand = "sshpass -p 'admin@123' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'sonic-vs') {
 			// SONiC community VS: admin/YourPaSsWoRd (created by the NetPilot init
 			// script — containerlab registers no credentials for the kind;

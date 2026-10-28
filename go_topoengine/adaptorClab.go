@@ -25,6 +25,13 @@ import (
 	tools "github.com/asadarafat/topoViewer/go_tools"
 )
 
+// defaultRoleByKind picks the icon (topoViewer-role) for a node that carries no
+// topoViewer-role label; any kind not listed here keeps the "pe" router icon.
+var defaultRoleByKind = map[string]string{
+	"juniper_vjunosrouter": "router",
+	"juniper_vjunosswitch": "leaf",
+}
+
 type ClabTopoV2 struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
@@ -229,6 +236,8 @@ func (cyTopo *CytoTopology) UnmarshalContainerLabTopoV2(topoFile []byte, clabHos
 		cytoJson.Data.TopoViewerRole = node.Labels.TopoViewerRole
 		if len(node.Labels.TopoViewerRole) != 0 {
 			cytoJson.Data.TopoViewerRole = node.Labels.TopoViewerRole
+		} else if role, ok := defaultRoleByKind[node.Kind]; ok {
+			cytoJson.Data.TopoViewerRole = role
 		} else {
 			// defaulting to "PE"
 			cytoJson.Data.TopoViewerRole = "pe"
