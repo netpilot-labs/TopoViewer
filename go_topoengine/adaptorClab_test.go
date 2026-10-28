@@ -1,6 +1,7 @@
 package topoengine
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -65,5 +66,43 @@ func TestUnmarshalContainerLabTopoV2_TypeInvalid(t *testing.T) {
 	cyTopo := CytoTopology{}
 	if _, err := cyTopo.UnmarshalContainerLabTopoV2([]byte(bad), "clab", nil); err == nil {
 		t.Fatal("type-invalid JSON must return an error")
+	}
+}
+
+func TestUnmarshalContainerLabTopoV2_DefaultRoleByKind(t *testing.T) {
+	// netpilot-labs/TopoViewer#29: an unlabeled vJunos node gets its kind's icon;
+	// a topoViewer-role label still wins, and other kinds keep "pe".
+	topo := `{"name": "roles", "type": "clab", "links": [], "nodes": [
+		{"id": "r1", "kind": "juniper_vjunosrouter", "labels": {}},
+		{"id": "s1", "kind": "juniper_vjunosswitch", "labels": {}},
+		{"id": "s2", "kind": "juniper_vjunosswitch", "labels": {"topoViewer-role": "spine"}},
+		{"id": "n1", "kind": "nokia_srlinux", "labels": {}}
+	]}`
+	cyTopo := CytoTopology{}
+	out, err := cyTopo.UnmarshalContainerLabTopoV2([]byte(topo), "clab", nil)
+	if err != nil {
+		t.Fatalf("valid topology returned error: %v", err)
+	}
+	var elems []struct {
+		Group string `json:"group"`
+		Data  struct {
+			ID   string `json:"id"`
+			Role string `json:"topoViewerRole"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(out, &elems); err != nil {
+		t.Fatalf("cytoscape payload is not a JSON array: %v", err)
+	}
+	want := map[string]string{"r1": "router", "s1": "leaf", "s2": "spine", "n1": "pe"}
+	got := map[string]string{}
+	for _, e := range elems {
+		if e.Group == "nodes" {
+			got[e.Data.ID] = e.Data.Role
+		}
+	}
+	for id, role := range want {
+		if got[id] != role {
+			t.Errorf("node %s role = %q, want %q", id, got[id], role)
+		}
 	}
 }
