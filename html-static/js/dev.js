@@ -2112,6 +2112,9 @@ async function changeTitle() {
 async function sshWebBased(event) {
     console.info("sshWebBased: ", globalSelectedNode)
     var routerName = globalSelectedNode
+    // Open the tab inside the tap/click gesture: iOS Safari blocks a window.open
+    // that runs after an await. The URL is filled in once the topology arrives.
+    var shellWindow = window.open("", "_blank")
     try {
         environments = await getEnvironments(event);
         console.info("sshWebBased - environments: ", environments)
@@ -2126,6 +2129,7 @@ async function sshWebBased(event) {
                 closeOnClick: true,
             });
             console.error(`sshWebBased: '${routerName}' missing from /get-environments payload`);
+            if (shellWindow) shellWindow.close();
             return;
         }
         var nodeKind = routerData["data"]["extraData"]["kind"] || "default"
@@ -2133,10 +2137,16 @@ async function sshWebBased(event) {
 
         console.info("sshWebBased: ", `${globalShellUrl}?RouterID=${routerData["data"]["extraData"]["mgmtIpv4Addresss"]}?RouterName=${routerName}?Kind=${nodeKind}?Image=${encodeURIComponent(nodeImage)}`)
 
-        window.open(`${globalShellUrl}?RouterID=${routerData["data"]["extraData"]["mgmtIpv4Addresss"]}?RouterName=${routerName}?Kind=${nodeKind}?Image=${encodeURIComponent(nodeImage)}`);
+        var shellUrl = `${globalShellUrl}?RouterID=${routerData["data"]["extraData"]["mgmtIpv4Addresss"]}?RouterName=${routerName}?Kind=${nodeKind}?Image=${encodeURIComponent(nodeImage)}`
+        if (shellWindow && !shellWindow.closed) {
+            shellWindow.location.href = shellUrl;
+        } else {
+            window.open(shellUrl);
+        }
 
     } catch (error) {
-        console.error('Error executing restore configuration:', error);
+        if (shellWindow) shellWindow.close();
+        console.error('sshWebBased: failed to open the terminal:', error);
     }
 }
 
