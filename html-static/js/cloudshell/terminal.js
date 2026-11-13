@@ -153,10 +153,12 @@
 			// Dell SmartFabric OS10: admin/admin (containerlab-injected, vrnetlab-created;
 			// live-login verified on bench 2026-08-22)
 			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
-		} else if (nodeKind === 'mikrotik_ros') {
+		} else if (nodeKind === 'mikrotik_chr' || nodeKind === 'mikrotik_ros') {
 			// MikroTik RouterOS CHR: admin/admin (containerlab-injected, set by the
-			// NetPilot launcher at boot; live-login verified on bench 2026-10-10,
-			// containerlab-mcp#288)
+			// launcher at boot). mikrotik_chr is containerlab's own CHR kind
+			// (v0.82+, containerlab-mcp#374); mikrotik_ros covers labs deployed
+			// before it under the NetPilot launcher (live-login verified on bench
+			// 2026-10-10, containerlab-mcp#288)
 			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'juniper_vjunosrouter' || nodeKind === 'juniper_vjunosswitch') {
 			// Juniper vJunos-router / vJunos-switch: admin/admin@123 (containerlab's
