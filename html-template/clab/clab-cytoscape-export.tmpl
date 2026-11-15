@@ -1,4 +1,4 @@
-{{/* This template support containerlab version: 0.44.3 */}}
+{{/* Rendered by the containerlab library pinned in go.mod (v0.83.0); its FuncMap has no "split" (containerlab-mcp#389). */}}
 {
     "name": "{{ .Name }}",
     "type": "{{ .Type }}",
@@ -32,22 +32,23 @@
         "labels": {{ToJSONPretty $c.Labels "      " "  "}}
         {{$i = add $i 1}}}{{end}}
     ],
-"links": [{{range $i, $l := .Clab.Links}}{{if $i}},{{end}}{{ $endpointA := index $l.Endpoints 0 }}{{ $endpointB := index $l.Endpoints 1 }}{{ $endpointAList := split (printf "%s"
- $endpointA) ":" }}{{ $endpointBList := split (printf "%s" $endpointB) ":" }}
+"links": [{{range $i, $l := .Clab.Links}}{{if $i}},{{end}}
     {{- $eps :=  $l.GetEndpoints }}
     {{- $ep :=  index $eps 0 }}
+    {{- $nodeA := $ep.GetNode.GetShortName }}
     {
         "a": {
-            "node": "{{ index $endpointAList 0 }}",
-            "nodeLongName": "{{ $type }}-{{ $labName}}-{{ index $endpointAList 0 }}",
+            "node": "{{ $nodeA }}",
+            "nodeLongName": "{{ $type }}-{{ $labName}}-{{ $nodeA }}",
             "interface": "{{ $ep.GetIfaceName }}",
             "mac": "{{ $ep.GetMac }}",
             "peer": "z"
         },
     {{- $ep :=  index $eps 1 }}
+    {{- $nodeZ := $ep.GetNode.GetShortName }}
         "z": {
-            "node": "{{ index $endpointBList 0 }}",
-            "nodeLongName": "{{ $type }}-{{ $labName}}-{{ index $endpointBList 0 }}",
+            "node": "{{ $nodeZ }}",
+            "nodeLongName": "{{ $type }}-{{ $labName}}-{{ $nodeZ }}",
             "interface": "{{ $ep.GetIfaceName }}",
             "mac": "{{ $ep.GetMac }}",
             "peer": "a"

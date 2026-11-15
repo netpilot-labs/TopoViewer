@@ -16,7 +16,7 @@ import (
 
 	"github.com/gosnmp/gosnmp"
 	"github.com/samber/lo"
-	containerlab "github.com/srl-labs/containerlab/clab"
+	containerlab "github.com/srl-labs/containerlab/core"
 
 	"golang.org/x/crypto/ssh"
 
@@ -150,17 +150,23 @@ type ClabNetemInterfaceData struct {
 func (cyTopo *CytoTopology) GenerateClabTopoFromYaml(clabYamlTopoFile string) (string, error) {
 	log.Infof("<go_topoengine><I>GenerateClabTopoFromYaml: Generating clab json topology, from clab yaml %s>", clabYamlTopoFile)
 
-	// dynamic definition of topofile path
+	// dynamic definition of topofile path. The containerlab library pinned in
+	// go.mod decides which node kinds parse: a kind it does not know fails here
+	// and topoviewer exits rc=1, so keep it at the fleet's containerlab version
+	// (containerlab-mcp#389: mikrotik_chr / vyosnetworks_vyos on v0.60).
 	c, err := containerlab.NewContainerLab(
 		containerlab.WithTimeout(time.Second*30),
-		containerlab.WithTopoPath(clabYamlTopoFile, ""),
+		containerlab.WithTopoPath(clabYamlTopoFile, nil),
 	)
 	if err != nil {
 		log.Errorf("<go_topoengine><I>GenerateClabTopoFromYaml: Failed creating containerlab instance %s>", err)
 		return "nil", err
 	}
 
-	c.ResolveLinks()
+	if err := c.ResolveLinks(); err != nil {
+		log.Errorf("<go_topoengine><I>GenerateClabTopoFromYaml: Failed resolving links %s>", err)
+		return "nil", err
+	}
 
 	// topoDataFPath := c.TopoPaths.TopoExportFile()
 	// return path.Join(t.labDir, topologyExportDatFileName)
@@ -169,11 +175,17 @@ func (cyTopo *CytoTopology) GenerateClabTopoFromYaml(clabYamlTopoFile string) (s
 	os.Mkdir(labDir, 0755)
 
 	clabJsonTopoFilePath := path.Join(labDir, "topology-data.json")
-	topoDataF, _ := os.Create(clabJsonTopoFilePath)
+	topoDataF, err := os.Create(clabJsonTopoFilePath)
+	if err != nil {
+		return "nil", err
+	}
+	defer topoDataF.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	c.GenerateExports(ctx, topoDataF, "./html-template/clab/clab-cytoscape-export.tmpl")
+	if err := c.GenerateExports(ctx, topoDataF, "./html-template/clab/clab-cytoscape-export.tmpl"); err != nil {
+		return "nil", err
+	}
 
 	log.Infof("clab json topology succesfully generated, location of the file is %s", clabJsonTopoFilePath)
 
@@ -1265,7 +1277,7 @@ func (cyTopo *CytoTopology) SendSnmpGetNodeEndpoint(targetAddress string, target
 			default:
 				pduType := pdu.Type
 				// fmt.Printf("iteration %v, %v ", j, i)
-				printResult("DEFAULT, PDU Type is %s, PDU value is: %d\n", rootOID, pduType, pdu.Value)
+				printResult("DEFAULT, OID is %s, PDU Type is %s, PDU value is: %v\n", rootOID, pduType, pdu.Value)
 			}
 		}
 	}
@@ -1274,7 +1286,7 @@ func (cyTopo *CytoTopology) SendSnmpGetNodeEndpoint(targetAddress string, target
 	if err != nil {
 		log.Errorf("failed to marshal JSON: %v", err)
 	}
-	log.Debugf(string(outputParsedMarshalled))
+	log.Debug(string(outputParsedMarshalled))
 
 	// Convert nested list to JSON
 	// var result []map[string]PortInfo

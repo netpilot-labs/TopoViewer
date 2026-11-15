@@ -18,7 +18,6 @@ import (
 
 	tools "github.com/asadarafat/topoViewer/go_tools"
 	topoengine "github.com/asadarafat/topoViewer/go_topoengine"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
@@ -573,7 +572,7 @@ func GetDockerSubInterfacesViaUnixSocket(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	response, err := cli.ContainerExecAttach(ctx, execID.ID, types.ExecStartCheck{})
+	response, err := cli.ContainerExecAttach(ctx, execID.ID, container.ExecAttachOptions{})
 	if err != nil {
 		log.Errorf("Failed to attach to exec instance: %v", err)
 		return

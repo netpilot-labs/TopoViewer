@@ -30,8 +30,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	dockercontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
@@ -679,7 +679,7 @@ func Clab(_ *cobra.Command, _ []string) error {
 					return
 				}
 
-				var statsData types.StatsJSON
+				var statsData dockercontainer.StatsResponse
 				err = json.NewDecoder(stats.Body).Decode(&statsData)
 				stats.Body.Close()
 				if err != nil {

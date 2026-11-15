@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	dockercontainer "github.com/docker/docker/api/types/container"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/docker/docker/client"
@@ -65,7 +65,7 @@ func ContainerComputeResourceUsage(w http.ResponseWriter, r *http.Request) {
 		}
 		defer stats.Body.Close()
 
-		var statsData types.StatsJSON
+		var statsData dockercontainer.StatsResponse
 		err = json.NewDecoder(stats.Body).Decode(&statsData)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

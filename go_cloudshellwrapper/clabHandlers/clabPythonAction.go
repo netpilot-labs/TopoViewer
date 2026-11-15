@@ -32,7 +32,7 @@ func PythonActionHandler(w http.ResponseWriter, r *http.Request, cyTopo *topoeng
 	RouterId := requestData["param1"].(string)
 	command := requestData["param2"].(string)
 
-	backupDir := fmt.Sprintf(HtmlPublicPrefixPath + cyTopo.ClabTopoDataV2.Name + "/node-backup/" + RouterId)
+	backupDir := HtmlPublicPrefixPath + cyTopo.ClabTopoDataV2.Name + "/node-backup/" + RouterId
 	err := os.Mkdir(backupDir, 0755)
 	if err != nil {
 		log.Error(err)
