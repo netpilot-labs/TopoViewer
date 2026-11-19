@@ -113,8 +113,23 @@
 		// Build command based on node kind
 		// Reference: https://containerlab.dev/manual/kinds/
 		var terminalCommand;
-		if (nodeKind === 'linux' && nodeImage.toLowerCase().includes('frr')) {
-			// FRRouting: use docker exec with vtysh for direct FRR CLI access
+		if (nodeKind === 'frr' || nodeKind === 'frrouting') {
+			// FRRouting on containerlab's frr kind (v0.83+): admin/admin over SSH
+			// lands in vtysh (the kind's image runs sshd; live-login verified on
+			// bench 2026-11-19, FRR 10.7.1). Two things happen in the first second
+			// after a deploy (measured there: 6 of 7 logins got every daemon Down,
+			// 1 of 7 was refused): sshd is not listening yet, and a vtysh
+			// connects only to the daemons running when it starts and never to a
+			// later one. So wait, up to 10 tries, until a one-shot `show watchfrr`
+			// reports daemons Up and none Down, then open the session. An image
+			// without sshd (plain FRR under the kind) falls back to docker exec.
+			var frrSsh = "sshpass -p 'admin' ssh -q -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no";
+			terminalCommand = "ok=0; for i in 1 2 3 4 5 6 7 8 9 10; do " + frrSsh + " -n admin@" + sshHost +
+				" 'show watchfrr' 2>/dev/null | awk '/ Up$/{u=1} / Down$/{d=1} END{exit !(u && !d)}' && { ok=1; break; }; sleep 1; done; " +
+				"if [ $ok = 1 ]; then " + frrSsh + " admin@" + sshHost + "; else docker exec -it " + routerName + " vtysh; fi";
+		} else if (nodeKind === 'linux' && nodeImage.toLowerCase().includes('frr')) {
+			// FRRouting on kind linux (labs deployed before the frr kind): docker
+			// exec with vtysh for direct FRR CLI access
 			terminalCommand = "docker exec -it " + routerName + " vtysh";
 		} else if (nodeKind === 'linux') {
 			// Linux containers: use docker exec for direct access

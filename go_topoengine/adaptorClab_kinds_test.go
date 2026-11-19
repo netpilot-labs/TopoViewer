@@ -18,7 +18,7 @@ import (
 // Add a kind here when NetPilot adds one.
 var netpilotKinds = []string{
 	"arista_ceos", "aruba_aoscx", "cisco_iol", "cisco_n9kv", "cisco_xrd",
-	"dell_ftosv", "fortinet_fortigate", "juniper_crpd", "juniper_vjunosrouter",
+	"dell_ftosv", "fortinet_fortigate", "frr", "juniper_crpd", "juniper_vjunosrouter",
 	"juniper_vjunosswitch", "linux", "mikrotik_chr", "nokia_srlinux",
 	"paloalto_panos", "sonic-vs", "vyosnetworks_vyos",
 }
