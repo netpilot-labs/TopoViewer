@@ -110,6 +110,15 @@
 		if (routerIp === 'undefined' || routerIp === 'null') routerIp = '';
 		var sshHost = routerIp || routerName;
 
+		// Every ssh below names the NetPilot lab SSH client config when the host
+		// has it (containerlab-mcp services/device_cli/lab_ssh_config: cloud path
+		// first, then the on-prem one): the legacy algorithms an old lab image
+		// needs (IOS 15.x: ssh-rsa host key, SHA-1 key exchange), scoped there by
+		// `Host` to lab management addresses. The host's own /etc/ssh/ssh_config
+		// relaxes nothing (containerlab-mcp#424). On a host without the file
+		// (an older server package) the command is plain `ssh`, as before.
+		var labSsh = "ssh $(for f in /opt/fastmcp/containerlab-mcp/services/device_cli/lab_ssh_config /opt/netpilot-mcp/server/services/device_cli/lab_ssh_config; do [ -r $f ] && echo -F $f && break; done)";
+
 		// Build command based on node kind
 		// Reference: https://containerlab.dev/manual/kinds/
 		var terminalCommand;
@@ -123,7 +132,7 @@
 			// later one. So wait, up to 10 tries, until a one-shot `show watchfrr`
 			// reports daemons Up and none Down, then open the session. An image
 			// without sshd (plain FRR under the kind) falls back to docker exec.
-			var frrSsh = "sshpass -p 'admin' ssh -q -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no";
+			var frrSsh = "sshpass -p 'admin' " + labSsh + " -q -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no";
 			terminalCommand = "ok=0; for i in 1 2 3 4 5 6 7 8 9 10; do " + frrSsh + " -n admin@" + sshHost +
 				" 'show watchfrr' 2>/dev/null | awk '/ Up$/{u=1} / Down$/{d=1} END{exit !(u && !d)}' && { ok=1; break; }; sleep 1; done; " +
 				"if [ $ok = 1 ]; then " + frrSsh + " admin@" + sshHost + "; else docker exec -it " + routerName + " vtysh; fi";
@@ -136,58 +145,58 @@
 			terminalCommand = "docker exec -it " + routerName + " bash";
 		} else if (nodeKind === 'cisco_iol') {
 			// Cisco IOL: admin/admin
-			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = "sshpass -p 'admin' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'arista_ceos') {
 			// Arista cEOS: admin/admin
-			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = "sshpass -p 'admin' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'juniper_crpd') {
 			// Juniper cRPD: root/clab123
-			terminalCommand = "sshpass -p 'clab123' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@" + sshHost;
+			terminalCommand = "sshpass -p 'clab123' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@" + sshHost;
 		} else if (nodeKind === 'paloalto_panos') {
 			// Palo Alto PAN: admin/Admin@123
-			terminalCommand = "sshpass -p 'Admin@123' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = "sshpass -p 'Admin@123' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'nokia_srlinux') {
 			// Nokia SR Linux: admin/NokiaSrl1!
-			terminalCommand = "sshpass -p 'NokiaSrl1!' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = "sshpass -p 'NokiaSrl1!' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'vyosnetworks_vyos') {
 			// VyOS: admin/admin
-			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = "sshpass -p 'admin' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'fortinet_fortigate') {
 			// Fortinet FortiGate: admin/Fortinet!1234 (FortiOS 7.6.5+ policy-compliant)
-			terminalCommand = "sshpass -p 'Fortinet!1234' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = "sshpass -p 'Fortinet!1234' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'cisco_xrd') {
 			// Cisco XRd: clab/clab@123 (containerlab-injected)
-			terminalCommand = "sshpass -p 'clab@123' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no clab@" + sshHost;
+			terminalCommand = "sshpass -p 'clab@123' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no clab@" + sshHost;
 		} else if (nodeKind === 'cisco_n9kv') {
 			// Cisco Nexus 9000v: admin/admin (containerlab-injected, vrnetlab-created)
-			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = "sshpass -p 'admin' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'aruba_aoscx') {
 			// Aruba AOS-CX: admin/admin (containerlab-injected, vrnetlab-created)
-			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = "sshpass -p 'admin' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'dell_ftosv') {
 			// Dell SmartFabric OS10: admin/admin (containerlab-injected, vrnetlab-created;
 			// live-login verified on bench 2026-08-22)
-			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = "sshpass -p 'admin' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'mikrotik_chr' || nodeKind === 'mikrotik_ros') {
 			// MikroTik RouterOS CHR: admin/admin (containerlab-injected, set by the
 			// launcher at boot). mikrotik_chr is containerlab's own CHR kind
 			// (v0.82+, containerlab-mcp#374); mikrotik_ros covers labs deployed
 			// before it under the NetPilot launcher (live-login verified on bench
 			// 2026-10-10, containerlab-mcp#288)
-			terminalCommand = "sshpass -p 'admin' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = "sshpass -p 'admin' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'juniper_vjunosrouter' || nodeKind === 'juniper_vjunosswitch') {
 			// Juniper vJunos-router / vJunos-switch: admin/admin@123 (containerlab's
 			// default credentials for both kinds, nodes/vr_vjunosswitch, passed to the
 			// vrnetlab launcher as --username/--password)
-			terminalCommand = "sshpass -p 'admin@123' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = "sshpass -p 'admin@123' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else if (nodeKind === 'sonic-vs') {
 			// SONiC community VS: admin/YourPaSsWoRd (created by the NetPilot init
 			// script — containerlab registers no credentials for the kind;
 			// live-login verified on bench 2026-09-29, containerlab-mcp#219)
-			terminalCommand = "sshpass -p 'YourPaSsWoRd' ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = "sshpass -p 'YourPaSsWoRd' " + labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		} else {
 			// Other network devices: use SSH with admin user (default fallback, no auto-password)
-			terminalCommand = "ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
+			terminalCommand = labSsh + " -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@" + sshHost;
 		}
 		console.log("Terminal command: " + terminalCommand + " (kind: " + nodeKind + ", image: " + nodeImage + ")");
 		ws.send(terminalCommand + "\n");
