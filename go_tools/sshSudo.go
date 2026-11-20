@@ -38,6 +38,7 @@ func (conn *Connection) SendCommands(cmds ...string) ([]byte, error) {
 	session, err := conn.NewSession()
 	if err != nil {
 		log.Errorf("<tools><E><SendCommands() error: %v>", err)
+		return []byte{}, err
 	}
 	defer session.Close()
 
@@ -127,13 +128,15 @@ func SshSudo(neHost string, nePort string, neUser string, nePass string, clabSer
 		neHost = clabServerAddress
 	}
 
-	log.Infof("neHost: %s, nePort: %s, neUser: %s, nePass: %s, cmds: %v>", neHost, nePort, neUser, nePass, cmds)
+	log.Infof("neHost: %s, nePort: %s, neUser: %s, cmds: %v>", neHost, nePort, neUser, cmds)
 
 	// ssh refers to the custom package above
 	conn, err := Connect(neHost+":"+nePort, neUser, nePass)
 	if err != nil {
 		log.Errorf("error: %v>", err)
+		return nil, err
 	}
+	defer conn.Close()
 
 	commandString := strings.Join(cmds, "; ")
 	output, err := conn.SendCommands("sudo " + commandString)

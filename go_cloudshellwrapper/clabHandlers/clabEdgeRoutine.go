@@ -63,8 +63,13 @@ func ClabEdgeGetMacAddress(w http.ResponseWriter, r *http.Request, cyTopo *topoe
 
 }
 
-func ClabEdgeGetImpairment(w http.ResponseWriter, r *http.Request, cyTopo *topoengine.CytoTopology, clabUser string, clabPass string, clabHost string, clabServerAddress string) {
+func ClabEdgeGetImpairment(w http.ResponseWriter, r *http.Request, cyTopo *topoengine.CytoTopology, deploymentType string, clabUser string, clabPass string, clabHost string, clabServerAddress string) {
 	log.Infof("<cmd-clab><I><clab-link-impairment(): GET method")
+
+	if deploymentType == DeploymentColocated {
+		clabEdgeGetImpairmentLocal(w, r, cyTopo)
+		return
+	}
 
 	// Parse query parameters
 	query := r.URL.Query()
@@ -144,27 +149,38 @@ func ClabEdgeGetImpairment(w http.ResponseWriter, r *http.Request, cyTopo *topoe
 	}
 }
 
-func ClabEdgeSetImpairment(w http.ResponseWriter, r *http.Request, cyTopo *topoengine.CytoTopology, clabUser string, clabPass string, clabHost string, clabServerAddress string) {
+func ClabEdgeSetImpairment(w http.ResponseWriter, r *http.Request, cyTopo *topoengine.CytoTopology, deploymentType string, clabUser string, clabPass string, clabHost string, clabServerAddress string) {
 	// Parse the request body
 	var requestData map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&requestData); err != nil {
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&requestData); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// Access the parameters
-	log.Info(requestData)
+	command, ok := requestData["param1"].(string)
+	if !ok {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
 
-	// clabUser := confClab.GetString("clab-user")
-	// clabHost := confClab.GetStringSlice("allowed-hostnames")
-	// clabPass := confClab.GetString("clab-pass")
-	command := requestData["param1"].(string)
+	var returnData []byte
+	var err error
+	if deploymentType == DeploymentColocated {
+		// Colocated: the command runs on this host as an argument vector.
+		argv, parseErr := ParseNetemCommand(command)
+		if parseErr != nil {
+			log.Warnf("<cmd-clab><W><clab-link-impairment() - rejected command: %v", parseErr)
+			http.Error(w, "Unsupported impairment command", http.StatusBadRequest)
+			return
+		}
+		log.Info("command: ", strings.Join(argv, " "))
+		returnData, err = tools.RunLocal(argv...)
+	} else {
+		log.Info("command: ", command)
+		returnData, err = tools.SshSudo(clabHost, "22", clabUser, clabPass, clabServerAddress, command)
+	}
 
-	log.Info("command: ", command)
-
-	returnData, err := tools.SshSudo(clabHost, "22", clabUser, clabPass, clabServerAddress, command)
-
-	log.Info(returnData)
+	log.Info(string(returnData))
 
 	// Create a response JSON object
 	responseData := map[string]interface{}{
@@ -189,6 +205,54 @@ func ClabEdgeSetImpairment(w http.ResponseWriter, r *http.Request, cyTopo *topoe
 		// Handle the error (e.g., log it)
 		http.Error(w, "Failed to write response", http.StatusInternalServerError)
 		return
+	}
+}
+
+// clabEdgeGetImpairmentLocal answers the impairment GET in colocated mode: it
+// reads the node and interface from param1/param2, validates both and runs
+// containerlab on this host without a shell or an SSH session.
+func clabEdgeGetImpairmentLocal(w http.ResponseWriter, r *http.Request, cyTopo *topoengine.CytoTopology) {
+	query := r.URL.Query()
+	nodeId, interfaceId := query.Get("param1"), query.Get("param2")
+	if !ValidNetemNode(nodeId) || !ValidNetemInterface(interfaceId) {
+		http.Error(w, "Invalid query parameters", http.StatusBadRequest)
+		return
+	}
+
+	cliOutput, err := tools.RunLocal(containerlabBinary, "tools", "netem", "show", "-n", nodeId)
+	if err != nil {
+		log.Infof("<cmd-clab><I><clab-link-impairment() - Error executing command: %v", err)
+		http.Error(w, "Error executing command", http.StatusInternalServerError)
+		return
+	}
+
+	versionOutput, err := tools.RunLocal(containerlabBinary, "version")
+	if err != nil {
+		log.Infof("<cmd-clab><I><clab-link-impairment() - Error checking clab version: %v", err)
+		http.Error(w, "Error checking clab version", http.StatusInternalServerError)
+		return
+	}
+
+	var parseCliOutput interface{}
+	if topoengine.ClabVersionOutputHigher(versionOutput, "0.60") {
+		parseCliOutput, err = cyTopo.ParseCLIOutputClab060(cliOutput, nodeId, interfaceId)
+	} else {
+		parseCliOutput, err = cyTopo.ParseCLIOutputClab(cliOutput, nodeId, interfaceId)
+	}
+	if err != nil {
+		log.Infof("<cmd-clab><I><clab-link-impairment() - Error parsing CLI output: %v", err)
+		http.Error(w, "Error parsing CLI output", http.StatusInternalServerError)
+		return
+	}
+
+	responseData := map[string]interface{}{
+		"result": "clab-link-impairment endpoint GET executed",
+		"data":   parseCliOutput,
+		"error":  nil,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(responseData); err != nil {
+		log.Infof("<cmd-clab><I><clab-link-impairment() - Error encoding JSON response: %v", err)
 	}
 }
 

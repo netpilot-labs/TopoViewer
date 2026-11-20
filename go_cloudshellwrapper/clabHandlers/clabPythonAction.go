@@ -16,11 +16,19 @@ import (
 
 // PythonActionHandler handles the /python-action endpoint
 func PythonActionHandler(w http.ResponseWriter, r *http.Request, cyTopo *topoengine.CytoTopology, HtmlPublicPrefixPath string, confClab config.Map) {
+	// Colocated mode has no SSH session to the host, and no shipped page calls
+	// this endpoint: it is answered as gone instead of running a client command.
+	if confClab.GetString("deployment-type") == DeploymentColocated {
+		http.Error(w, "python-action is not available in colocated mode", http.StatusGone)
+		return
+	}
+
 	// Parse the request body
 	var requestData map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&requestData); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		log.Error(err)
+		return
 	}
 
 	// Access the parameters

@@ -749,7 +749,7 @@ func Clab(_ *cobra.Command, _ []string) error {
 		topoStateMu.RLock()
 		topoSnapshot := cyTopo
 		topoStateMu.RUnlock()
-		clabHandlers.ClabEdgeSetImpairment(w, r, &topoSnapshot, confClab.GetString("clab-user"), confClab.GetString("clab-pass"), confClab.GetStringSlice("allowed-hostnames")[0], clabServerAddress)
+		clabHandlers.ClabEdgeSetImpairment(w, r, &topoSnapshot, deploymentType, confClab.GetString("clab-user"), confClab.GetString("clab-pass"), confClab.GetStringSlice("allowed-hostnames")[0], clabServerAddress)
 	}).Methods("POST")
 
 	// API endpoint to get clab-link-impairment value
@@ -757,7 +757,7 @@ func Clab(_ *cobra.Command, _ []string) error {
 		topoStateMu.RLock()
 		topoSnapshot := cyTopo
 		topoStateMu.RUnlock()
-		clabHandlers.ClabEdgeGetImpairment(w, r, &topoSnapshot, confClab.GetString("clab-user"), confClab.GetString("clab-pass"), confClab.GetStringSlice("allowed-hostnames")[0], clabServerAddress)
+		clabHandlers.ClabEdgeGetImpairment(w, r, &topoSnapshot, deploymentType, confClab.GetString("clab-user"), confClab.GetString("clab-pass"), confClab.GetStringSlice("allowed-hostnames")[0], clabServerAddress)
 	}).Methods("GET")
 
 	// API endpoint to get clab-link-macaddress value

@@ -1515,11 +1515,18 @@ func (cyTopo *CytoTopology) IsClabVersionHigher(hostname, port, user, pass, serv
 		return false, err
 	}
 
+	return ClabVersionOutputHigher(cliOutputClabVersion, targetVersion), nil
+}
+
+// ClabVersionOutputHigher reports whether the version printed by
+// "containerlab version" is higher than targetVersion. Output without a
+// version line reads as not higher.
+func ClabVersionOutputHigher(versionOutput []byte, targetVersion string) bool {
 	// Use regex to extract the version number
 	versionRegex := regexp.MustCompile(`version:\s*([\d.]+)`)
-	match := versionRegex.FindStringSubmatch(string(cliOutputClabVersion))
+	match := versionRegex.FindStringSubmatch(string(versionOutput))
 	if len(match) < 2 {
-		return false, nil // Return false if version extraction fails
+		return false // version extraction failed
 	}
 
 	// Extracted version string
@@ -1546,14 +1553,14 @@ func (cyTopo *CytoTopology) IsClabVersionHigher(hostname, port, user, pass, serv
 
 		// Compare parts numerically
 		if currentNum > targetNum {
-			return true, nil
+			return true
 		} else if currentNum < targetNum {
-			return false, nil
+			return false
 		}
 	}
 
 	// If all parts are equal, the version is not higher
-	return false, nil
+	return false
 }
 
 // func (cyTopo *CytoTopology) GetDockerNetworkNamespaceIDViaUnixSocket(containerID string) (string, error) {
